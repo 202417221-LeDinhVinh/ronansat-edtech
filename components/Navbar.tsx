@@ -12,6 +12,8 @@ import { useSession, signOut } from "next-auth/react";   // signOut để signOu
 import Link from "next/link";
 import { LogOut, Settings, BarChart2, Trophy, Target, BookOpen  } from "lucide-react";
 import { usePathname } from "next/navigation";          // Công cụ để đọc url hiện tại -> Biết user ở trang nào -> Tô đậm ô đó  
+import { LayoutGrid } from "lucide-react";
+
 
 export default function Navbar() {
     const { data: session, status } = useSession();    // Lấy thông tin phiên đăng nhập
@@ -80,6 +82,14 @@ export default function Navbar() {
                             Review Mistakes
                         </Link>
 
+                        <Link
+                            href="/grid-review" // Đường dẫn tới trang mới
+                            className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/grid-review" ? "text-blue-600" : "text-slate-600"}`}
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                            Grid Review
+                        </Link>
+
 
 
                          <Link 
@@ -90,7 +100,7 @@ export default function Navbar() {
                             Hall of Fame
                         </Link>
 
-                        
+
 
                         <Link
                             href="/settings"

@@ -54,7 +54,7 @@ export const resultService = {
             .populate({
                 path: 'answers.questionId',
                 model: 'Question',
-                select: 'questionText correctAnswer _id imageUrl'
+                select: 'questionText correctAnswer _id imageUrl choices passage domain'
             });
 
         return { results };
