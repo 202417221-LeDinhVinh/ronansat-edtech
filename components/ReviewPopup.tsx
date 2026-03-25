@@ -159,8 +159,60 @@ export default function ReviewPopup({ ans, onClose, expandedExplanation, loading
                                 </p>
                             </div>
 
-                            {/* Answer choices */}
-                            {choices.length === 0 ? (
+                            {/* Answer section (SPR OR MULTIPLE CHOICE) */}
+                            {q.questionType === "spr" ? (
+                                // GIAO DIỆN TỰ LUẬN
+                                <div className="flex flex-col gap-3">
+                                    {(() => {
+                                        const isCorrect = ans.isCorrect;
+                                        const isOmitted = !ans.userAnswer || ans.userAnswer === "Omitted";
+                                        const isWrong = !isCorrect && !isOmitted;
+
+                                        const wrapClass = isCorrect
+                                            ? "bg-emerald-50 border-emerald-400 text-emerald-900 shadow-sm shadow-emerald-100"
+                                            : isWrong
+                                            ? "bg-red-50 border-red-400 text-red-900 shadow-sm shadow-red-100"
+                                            : "bg-white border-slate-200 text-slate-700";
+
+                                        const circleClass = isCorrect
+                                            ? "bg-emerald-500 border-emerald-500 text-white"
+                                            : isWrong
+                                            ? "bg-red-500 border-red-500 text-white"
+                                            : "border-slate-300 text-slate-500 bg-white";
+
+                                        const Icon = isCorrect ? CheckCircle : isWrong ? XCircle : null;
+
+                                        return (
+                                            <div className={`flex items-center gap-3.5 px-4 py-3.5 border-2 rounded-xl transition-all duration-150 ${wrapClass}`}>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[11px] font-semibold uppercase tracking-widest opacity-60 mb-1.5">Your answer</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <span className={`bg-white border px-3 py-1.5 rounded-lg font-bold shadow-sm text-sm ${isCorrect ? "text-emerald-700 border-emerald-200" : isWrong ? "text-red-700 border-red-200" : "text-slate-600 border-slate-200"}`}>
+                                                            {ans.userAnswer || "Omitted"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {Icon && <Icon className="w-4.5 h-4.5 shrink-0 opacity-70" />}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <div className="flex items-center gap-3.5 px-4 py-3.5 border-2 rounded-xl bg-emerald-50 border-emerald-400 shadow-sm shadow-emerald-100">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-700/60 mb-1.5">Accepted</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {q.sprAnswers?.filter(Boolean).map((a: string, i: number) => (
+                                                    <span key={i} className="bg-white text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg font-bold shadow-sm">
+                                                        {a}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <CheckCircle className="w-4.5 h-4.5 shrink-0 text-emerald-500 opacity-70" />
+                                    </div>
+                                </div>
+                            ) : choices.length === 0 ? (
+                                // BÁO LỖI NẾU TRẮC NGHIỆM MÀ KHÔNG CÓ CHOICES
                                 <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl">
                                     <div className="flex items-center gap-2 font-bold text-amber-800 mb-2 text-sm">
                                         <AlertCircle className="w-4 h-4" />
@@ -183,6 +235,7 @@ export default function ReviewPopup({ ans, onClose, expandedExplanation, loading
                                     </div>
                                 </div>
                             ) : (
+                                // GIAO DIỆN TRẮC NGHIỆM
                                 <div className="flex flex-col gap-3">
                                     {choices.map((choice: string, i: number) => {
                                         const isUserChoice = ans?.userAnswer === choice;

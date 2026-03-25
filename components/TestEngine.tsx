@@ -156,6 +156,21 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
             return; 
         }
 
+        // THÊM MỚI: HÀM KIỂM TRA ĐÁP ÁN ĐÚNG CHO CẢ TRẮC NGHIỆM VÀ TỰ LUẬN
+        const checkIsCorrect = (q: any, userAns: string) => {
+            if (!userAns || userAns === "Omitted") return false;
+            
+            if (q.questionType === "spr") {
+                // Nếu là tự luận, duyệt qua mảng sprAnswers xem có đáp án nào khớp không
+                // .trim() để bỏ khoảng trắng thừa 2 đầu, .toLowerCase() để không phân biệt hoa thường
+                return q.sprAnswers?.some((ans: string) => 
+                    ans && ans.trim().toLowerCase() === userAns.trim().toLowerCase()
+                );
+            }
+            // Nếu là trắc nghiệm thì so sánh thẳng như cũ
+            return userAns === q.correctAnswer;
+        };
+
         // 2. NẾU LÀ SECTIONAL HOẶC ĐÃ ĐẾN CUỐI FULL TEST -> CHẤM ĐIỂM VÀ NỘP BÀI
         try {
           // Chỉ lấy câu hỏi của Module hiện tại nếu đang thi Sectional, ngược lại lấy toàn bộ
@@ -166,7 +181,7 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
                 return {
                     questionId: q._id,
                     userAnswer: userAns,
-                    isCorrect: userAns === q.correctAnswer
+                    isCorrect: checkIsCorrect(q, userAns) // SỬ DỤNG HÀM KIỂM TRA MỚI Ở ĐÂY
                 };
             });
 
@@ -175,7 +190,7 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
                 let correctCount = 0;
                 currentModuleQuestions.forEach(q => {
                     const userAns = answers[q._id] || "";
-                    if (userAns === q.correctAnswer) correctCount++;
+                    if (checkIsCorrect(q, userAns)) correctCount++; // SỬ DỤNG HÀM KIỂM TRA MỚI Ở ĐÂY
                 });
 
                 // Gửi API với các trường dữ liệu tương thích với Schema mới
@@ -200,7 +215,7 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
 
                 questions.forEach(q => {
                     const userAns = answers[q._id] || "";
-                    if (userAns === q.correctAnswer) {
+                    if (checkIsCorrect(q, userAns)) { // SỬ DỤNG HÀM KIỂM TRA MỚI Ở ĐÂY
                         const points = q.points || 0; 
                         if (q.section === "Reading and Writing") {
                             earnedReadingPoints += points;

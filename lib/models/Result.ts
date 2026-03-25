@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IAnswer {
     questionId: mongoose.Types.ObjectId;
-    userAnswer: string;
+    userAnswer?: string; // SỬA: Thêm dấu ? để không bắt buộc
     isCorrect: boolean;
 }
 
@@ -23,13 +23,19 @@ export interface IResult extends Document {
         readingAndWriting?: number;
         math?: number;
     };
+
+    // --- THÊM CÁC TRƯỜNG LƯU ĐIỂM CHO SECTIONAL ---
+    totalScore?: number;
+    readingScore?: number;
+    mathScore?: number;
+
     date: Date;
     createdAt?: Date; // Mongoose tự động tạo ra nhờ timestamps: true
 }
 
 const AnswerSchema: Schema<IAnswer> = new Schema({
     questionId: { type: Schema.Types.ObjectId, ref: "Question", required: true },
-    userAnswer: { type: String, required: true },
+    userAnswer: { type: String, required: false, default: "Omitted" }, // SỬA: Đổi required thành false và gán mặc định là Omitted nếu rỗng
     isCorrect: { type: Boolean, required: true },
 });
 
@@ -46,11 +52,17 @@ const ResultSchema: Schema<IResult> = new Schema(
         answers: [AnswerSchema],
         
         // --- ĐÃ ĐỔI required TỪ true THÀNH false ---
-        score: { type: Number, required: false },             
+        score: { type: Number, required: false },            
         sectionBreakdown: {
             readingAndWriting: { type: Number, required: false }, 
             math: { type: Number, required: false },              
         },
+
+        // --- CHO PHÉP MONGOOSE LƯU THÊM CÁC TRƯỜNG ĐIỂM NÀY ---
+        totalScore: { type: Number, required: false },
+        readingScore: { type: Number, required: false },
+        mathScore: { type: Number, required: false },
+
         date: { type: Date, default: Date.now },
     },
     { timestamps: true } // Tính năng này tự động sinh ra trường createdAt và updatedAt

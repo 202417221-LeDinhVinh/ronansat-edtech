@@ -15,9 +15,12 @@ export const resultService = {
         const user = await User.findById(userId);
         if (user) {
             user.testsTaken.push(data.testId);
-            if (data.score > user.highestScore) {
+
+            // THÊM ĐIỀU KIỆN MỚI: Chỉ cập nhật điểm cao nhất nếu KHÔNG PHẢI bài thi Sectional (vì Sectional điểm tính theo số câu đúng, không phải thang 1600)
+            if (!data.isSectional && data.score && data.score > (user.highestScore || 0)) {
                 user.highestScore = data.score;
             }
+            
             const now = new Date();
             user.lastTestDate = now;
 
@@ -55,7 +58,8 @@ export const resultService = {
             .populate({
                 path: 'answers.questionId',
                 model: 'Question',
-                select: 'questionText correctAnswer _id imageUrl choices passage domain'
+                // SỬA TẠI ĐÂY: Thêm 'questionType' và 'sprAnswers' vào select để gửi về cho màn hình ReviewPopup
+                select: 'questionText correctAnswer _id imageUrl choices passage domain questionType sprAnswers'
             });
 
         return { results };

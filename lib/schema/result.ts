@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const AnswerValidationSchema = z.object({
     questionId: z.string().min(1, "Question ID is required"),
-    userAnswer: z.string(),
+    userAnswer: z.string().optional().nullable(), // SỬA: Không bắt buộc phải có chữ, cho phép rỗng (khi tự luận không điền)
     isCorrect: z.boolean(),
 });
 
@@ -22,6 +22,11 @@ export const ResultValidationSchema = z.object({
         readingAndWriting: z.number().min(0).optional(),
         math: z.number().min(0).optional(),
     }).optional(),
+
+    // --- THÊM CÁC TRƯỜNG ĐIỂM CHO CHẾ ĐỘ THI TỪNG PHẦN (Từ TestEngine gửi lên) ---
+    totalScore: z.number().optional(),
+    readingScore: z.number().optional(),
+    mathScore: z.number().optional()
 });
 
 export type ResultInput = z.infer<typeof ResultValidationSchema>;

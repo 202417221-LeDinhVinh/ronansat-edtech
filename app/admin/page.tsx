@@ -35,11 +35,13 @@ console.log("Cloud Name đang nhận là:", process.env.NEXT_PUBLIC_CLOUDINARY_C
     const [questionForm, setQuestionForm] = useState({
         section: "Reading and Writing",
         module: 1,
+        questionType: "multiple_choice", // THÊM MỚI: Thêm loại câu hỏi. Mặc định là Trắc nghiệm. Nếu muốn Tự luận là mặc định, đổi chữ này thành "spr"
         questionText: "",
         passage: "",
         imageUrl: "",
         choices: ["", "", "", ""],      // Bao gồm các lựa chọn
         correctAnswer: "",
+        sprAnswers: ["", "", ""],        // THÊM MỚI: Thêm mảng 3 ô trống để chứa 3 cách viết đáp án tự luận
         explanation: "",
         difficulty: "medium",
         points: 10
@@ -145,11 +147,21 @@ const [studentForm, setStudentForm] = useState({
             return;
         }
 
-        // Đán án đúng questionForm.correctAnswer phải thuộc 1 trong 4 option của câu
-        if (!questionForm.choices.includes(questionForm.correctAnswer)) {
-            setQuestionMessage("The correct answer must exactly match one of the choices.");
-            return;
+        // THÊM MỚI: Tách biệt cách kiểm tra lỗi giữa Trắc nghiệm và Tự luận
+        if (questionForm.questionType === "multiple_choice") {
+            // Đán án đúng questionForm.correctAnswer phải thuộc 1 trong 4 option của câu
+            if (!questionForm.choices.includes(questionForm.correctAnswer)) {
+                setQuestionMessage("The correct answer must exactly match one of the choices.");
+                return;
+            }
+        } else {
+            // Nếu là tự luận, bắt buộc phải điền ô đáp án số 1
+            if (!questionForm.sprAnswers[0].trim()) {
+                setQuestionMessage("Vui lòng điền ít nhất 1 đáp án cho câu tự luận.");
+                return;
+            }
         }
+
 
         try {    // Đóng gói all nội dung câu hỏi (...questionForm), đings vào mã testID rồi gửi(post) lên máy chủ (API_PATHS.QUESTIONS)
             const res = await api.post(API_PATHS.QUESTIONS, {    
@@ -167,6 +179,7 @@ const [studentForm, setStudentForm] = useState({
                     imageUrl: "",
                     choices: ["", "", "", ""],
                     correctAnswer: "",
+                    sprAnswers: ["", "", ""], // THÊM MỚI: Xóa trắng lại 3 ô tự luận
                     explanation: "",
                 });
             } else {
@@ -309,7 +322,7 @@ const [studentForm, setStudentForm] = useState({
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Section</label>
                                         <select
@@ -332,6 +345,19 @@ const [studentForm, setStudentForm] = useState({
                                         >
                                             <option value={1}>Module 1</option>
                                             <option value={2}>Module 2</option>
+                                        </select>
+                                </div>
+
+                                {/* THÊM MỚI: PHẦN CHỌN LOẠI CÂU HỎI */}
+                                <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-1">Loại câu hỏi</label>
+                                        <select
+                                            value={questionForm.questionType}      
+                                            onChange={(e) => setQuestionForm({ ...questionForm, questionType: e.target.value })}   
+                                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900 font-medium"
+                                        >
+                                            <option value="multiple_choice">Trắc nghiệm</option>
+                                            <option value="spr">Tự luận</option>
                                         </select>
                                 </div>
 
@@ -394,10 +420,8 @@ const [studentForm, setStudentForm] = useState({
                                             ) : (
 
                                                  <>
-                      {/* KHU VỰC THÊM ẢNH CHO CÂU HỎI (OPTIONAL) */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-1">Question Image / Chart (Optional)</label>
-                                        <div className="border border-slate-300 rounded-lg p-3 bg-slate-50">
+                                        <div className="border border-slate-300 rounded-lg bg-slate-50">
                                             
                                             {/* GIỮ CLDUPLOADWIDGET Ở NGOÀI CÙNG ĐỂ KHÔNG BỊ LỖI KẸT CHUỘT */}
                                             <CldUploadWidget
@@ -464,57 +488,101 @@ const [studentForm, setStudentForm] = useState({
                                         />
                                     </div>
 
-                                    <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                        <label className="block text-sm font-bold text-slate-800">Multiple Choice Options</label>
-                                        {questionForm.choices.map((choice, i) => (    // Mỗi lần loop lấy 2 thông tin: Nội dung lựa chọn và index của đáp án này ( 0 -> 3 )
-                                                                                      // choices có 4 vị trí, map chỉ chạy hết 4 vị trí đó rồi dừng
-                                            <div key={i} className="flex items-center gap-3">
-                                                <span className="w-8 h-8 flex items-center justify-center bg-slate-200 text-slate-700 font-bold rounded shrink-0">
-                                                    {String.fromCharCode(65 + i)}     {/* Span này hiện 1 ô vuông kèm chữ A B C or D (65 66 67 68) bên trái ô nhập nội dung Option, từ Ascii chuyển thành string để hiện trong ô này*/}
-                                                </span>
-                                                <input
-                                                    type="text"
+                                    {/* THÊM MỚI: KIỂM TRA ĐIỀU KIỆN ĐỂ HIỂN THỊ GIAO DIỆN PHÙ HỢP */}
+                                    {questionForm.questionType === "multiple_choice" ? (
+                                        <>
+                                            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                                <label className="block text-sm font-bold text-slate-800">Multiple Choice Options</label>
+                                                {questionForm.choices.map((choice, i) => (    // Mỗi lần loop lấy 2 thông tin: Nội dung lựa chọn và index của đáp án này ( 0 -> 3 )
+                                                                                            // choices có 4 vị trí, map chỉ chạy hết 4 vị trí đó rồi dừng
+                                                    <div key={i} className="flex items-center gap-3">
+                                                        <span className="w-8 h-8 flex items-center justify-center bg-slate-200 text-slate-700 font-bold rounded shrink-0">
+                                                            {String.fromCharCode(65 + i)}     {/* Span này hiện 1 ô vuông kèm chữ A B C or D (65 66 67 68) bên trái ô nhập nội dung Option, từ Ascii chuyển thành string để hiện trong ô này*/}
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            required
+                                                            value={choice}  // Update vào choice (nội dung của lựa chọn này)
+                                                            onChange={(e) => handleChoiceChange(i, e.target.value)}   // Truyền vào index và nội dung mới của lựa chọn này
+                                                            placeholder={`Option ${String.fromCharCode(65 + i)}`}   
+                                                            className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-bold text-emerald-700 mb-1">Correct Answer *</label>
+                                                    <select
+                                                        required
+                                                        value={questionForm.correctAnswer}   // Update đáp án đúng
+                                                        onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-emerald-300 bg-emerald-50 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
+                                                    >
+                                                        <option value="" disabled className="">Select correct choice</option>
+                                                        {questionForm.choices.map((choice, i) => (
+                                                            <option key={i} value={choice} disabled={!choice} className="">   {/**disabled={!choice} -> Nếu lựa chọn chưa được điền nội dung thì nó k được làm đáp án đúng => Disable để k chọn đc */}
+                                                                {choice ? `Option ${String.fromCharCode(65 + i)}: ${choice}` : `Option ${String.fromCharCode(65 + i)} (Empty)`}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <p className="text-xs text-slate-500 mt-1">Select from the choices above.</p>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Explanation</label>
+                                                    <textarea
+                                                        rows={2}
+                                                        required
+                                                        value={questionForm.explanation}     // update lời giải thích cho câu hỏi
+                                                        onChange={(e) => setQuestionForm({ ...questionForm, explanation: e.target.value })}
+                                                        placeholder="Why is this correct?"
+                                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white text-slate-900"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {/* THÊM MỚI: GIAO DIỆN CHO CÂU TỰ LUẬN (SPR) */}
+                                            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                                <label className="block text-sm font-bold text-slate-800">Đáp án tự luận (Hỗ trợ tối đa 3 cách viết)</label>
+                                                <p className="text-xs text-slate-500 mb-3">Ví dụ: Điền 1/3 ở cách 1; điền 0.333 ở cách 2; điền .333 ở cách 3</p>
+                                                {[0, 1, 2].map((i) => (
+                                                    <div key={i} className="flex items-center gap-3">
+                                                        <span className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-700 font-bold rounded shrink-0">
+                                                            {i + 1}
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            required={i === 0} // Chỉ bắt buộc nhập ở ô đầu tiên
+                                                            value={questionForm.sprAnswers[i]}
+                                                            onChange={(e) => {
+                                                                const newAnswers = [...questionForm.sprAnswers];
+                                                                newAnswers[i] = e.target.value;
+                                                                setQuestionForm({ ...questionForm, sprAnswers: newAnswers });
+                                                            }}
+                                                            placeholder={i === 0 ? "Cách viết đáp án 1 (Bắt buộc) - VD: 1/3" : `Cách viết đáp án ${i + 1} (Tùy chọn) - VD: 0.333`}
+                                                            className={`w-full px-4 py-2 border ${i === 0 ? 'border-blue-300 bg-blue-50' : 'border-slate-300'} rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900`}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1">Explanation</label>
+                                                <textarea
+                                                    rows={2}
                                                     required
-                                                    value={choice}  // Update vào choice (nội dung của lựa chọn này)
-                                                    onChange={(e) => handleChoiceChange(i, e.target.value)}   // Truyền vào index và nội dung mới của lựa chọn này
-                                                    placeholder={`Option ${String.fromCharCode(65 + i)}`}   
-                                                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                                                    value={questionForm.explanation}     // update lời giải thích cho câu hỏi
+                                                    onChange={(e) => setQuestionForm({ ...questionForm, explanation: e.target.value })}
+                                                    placeholder="Why is this correct?"
+                                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white text-slate-900"
                                                 />
                                             </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-bold text-emerald-700 mb-1">Correct Answer *</label>
-                                            <select
-                                                required
-                                                value={questionForm.correctAnswer}   // Update đáp án đúng
-                                                onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: e.target.value })}
-                                                className="w-full px-4 py-2 border border-emerald-300 bg-emerald-50 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
-                                            >
-                                                <option value="" disabled className="">Select correct choice</option>
-                                                {questionForm.choices.map((choice, i) => (
-                                                    <option key={i} value={choice} disabled={!choice} className="">   {/**disabled={!choice} -> Nếu lựa chọn chưa được điền nội dung thì nó k được làm đáp án đúng => Disable để k chọn đc */}
-                                                        {choice ? `Option ${String.fromCharCode(65 + i)}: ${choice}` : `Option ${String.fromCharCode(65 + i)} (Empty)`}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <p className="text-xs text-slate-500 mt-1">Select from the choices above.</p>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-1">Explanation</label>
-                                            <textarea
-                                                rows={2}
-                                                required
-                                                value={questionForm.explanation}     // update lời giải thích cho câu hỏi
-                                                onChange={(e) => setQuestionForm({ ...questionForm, explanation: e.target.value })}
-                                                placeholder="Why is this correct?"
-                                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white text-slate-900"
-                                            />
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="pt-6 border-t border-slate-200 flex justify-end">
@@ -650,4 +718,3 @@ const [studentForm, setStudentForm] = useState({
         </div>
     );
 }
-
