@@ -36,7 +36,7 @@ export default function AnswerDetails({ q, ans }: AnswerDetailsProps) {
             <div className="flex flex-col gap-3">
                 <div className={`flex items-center gap-3.5 px-4 py-3.5 border-2 rounded-xl transition-all duration-150 ${wrapClass}`}>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest opacity-60 mb-1.5">Your answer</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-widest opacity-70 mb-1.5">Your answer</p>
                         <div className="flex flex-wrap gap-2">
                             <span className={`bg-white border px-3 py-1.5 rounded-lg font-bold shadow-sm text-sm ${isCorrect ? "text-emerald-700 border-emerald-200" : isWrong ? "text-red-700 border-red-200" : "text-slate-600 border-slate-200"}`}>
                                 <Latex>{ans.userAnswer || "Omitted"}</Latex>
@@ -57,7 +57,7 @@ export default function AnswerDetails({ q, ans }: AnswerDetailsProps) {
                             ))}
                         </div>
                     </div>
-                    <CheckCircle className="w-4.5 h-4.5 shrink-0 text-emerald-500 opacity-70" />
+                    <CheckCircle className="w-4.5 h-4.5 shrink-0 text-emerald-700 opacity-70" />
                 </div>
             </div>
         );
