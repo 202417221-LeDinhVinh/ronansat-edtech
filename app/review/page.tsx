@@ -132,7 +132,7 @@ function ReviewContent() {
             <div className="flex flex-wrap gap-2 mt-3">
                 {answers.map((ans, idx) => {
                     const isOmitted = !ans.userAnswer || ans.userAnswer === "" || ans.userAnswer === "Omitted";
-                    let cls = "bg-slate-50 text-slate-400 border border-slate-200";
+                    let cls = "bg-slate-50 text-slate-500 border border-slate-200";
                     if (!isOmitted) {
                         cls = ans.isCorrect
                             ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"
