@@ -290,75 +290,82 @@ function ReviewContent() {
                         </div>
 
                         {/* ── Modules ── */}
-                        {testType === "full" ? (
-                            <div className="space-y-6">
-                                {/* Reading & Writing */}
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-indigo-100 rounded-lg">
-                                            <BookOpen className="w-4 h-4 text-indigo-600" />
+                        {/* ── Modules ── */}
+                        {testType === "full" ? (() => {
+                            // Phân loại các câu trả lời theo section và module thay vì dùng mảng cứng
+                            const rwMod1 = activeTest.answers?.filter((a: any) => a.questionId?.section === "Reading and Writing" && a.questionId?.module === 1) || [];
+                            const rwMod2 = activeTest.answers?.filter((a: any) => a.questionId?.section === "Reading and Writing" && a.questionId?.module === 2) || [];
+                            const mathMod1 = activeTest.answers?.filter((a: any) => a.questionId?.section === "Math" && a.questionId?.module === 1) || [];
+                            const mathMod2 = activeTest.answers?.filter((a: any) => a.questionId?.section === "Math" && a.questionId?.module === 2) || [];
+
+                            return (
+                                <div className="space-y-6">
+                                    {/* Reading & Writing */}
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1.5 bg-indigo-100 rounded-lg">
+                                                <BookOpen className="w-4 h-4 text-indigo-600" />
+                                            </div>
+                                            <h2 className="font-bold text-base text-indigo-700">Reading &amp; Writing</h2>
                                         </div>
-                                        <h2 className="font-bold text-base text-indigo-700">Reading &amp; Writing</h2>
+
+                                        {[
+                                            { label: "Module 1", answers: rwMod1, startIndex: 0 },
+                                            { label: "Module 2", answers: rwMod2, startIndex: 0 },
+                                        ].map(({ label, answers, startIndex }) => {
+                                            const s = getStats(answers);
+                                            return (
+                                                <div key={label}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-bold text-indigo-600">{label}</span>
+                                                        <div className="flex items-center gap-3 text-xs text-slate-400">
+                                                            <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-medium border border-indigo-100">
+                                                                {answers.length} Questions
+                                                            </span>
+                                                            <span>{s.correct} correct · {s.wrong} wrong · {s.omitted} omitted</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-px bg-indigo-100 mb-1" />
+                                                    {renderGrid(answers, startIndex)}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
 
-                                    {[
-                                        { label: "Module 1", slice: [0, 27] as [number, number] },
-                                        { label: "Module 2", slice: [27, 54] as [number, number] },
-                                    ].map(({ label, slice }) => {
-                                        const answers = activeTest.answers?.slice(...slice) || [];
-                                        const s = getStats(answers);
-                                        return (
-                                            <div key={label}>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-bold text-indigo-600">{label}</span>
-                                                    <div className="flex items-center gap-3 text-xs text-slate-400">
-                                                        <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-medium border border-indigo-100">
-                                                            {answers.length} Questions
-                                                        </span>
-                                                        <span>{s.correct} correct · {s.wrong} wrong · {s.omitted} omitted</span>
-                                                    </div>
-                                                </div>
-                                                <div className="h-px bg-indigo-100 mb-1" />
-                                                {renderGrid(answers, slice[0])}
+                                    {/* Math */}
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1.5 bg-blue-100 rounded-lg">
+                                                <Calculator className="w-4 h-4 text-blue-600" />
                                             </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Math */}
-                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-blue-100 rounded-lg">
-                                            <Calculator className="w-4 h-4 text-blue-600" />
+                                            <h2 className="font-bold text-base text-blue-700">Math</h2>
                                         </div>
-                                        <h2 className="font-bold text-base text-blue-700">Math</h2>
-                                    </div>
 
-                                    {[
-                                        { label: "Module 1", slice: [54, 76] as [number, number] },
-                                        { label: "Module 2", slice: [76, 98] as [number, number] },
-                                    ].map(({ label, slice }) => {
-                                        const answers = activeTest.answers?.slice(...slice) || [];
-                                        const s = getStats(answers);
-                                        return (
-                                            <div key={label}>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-bold text-blue-600">{label}</span>
-                                                    <div className="flex items-center gap-3 text-xs text-slate-400">
-                                                        <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 font-medium border border-blue-100">
-                                                            {answers.length} Questions
-                                                        </span>
-                                                        <span>{s.correct} correct · {s.wrong} wrong · {s.omitted} omitted</span>
+                                        {[
+                                           { label: "Module 1", answers: mathMod1, startIndex: 0 }, 
+                                           { label: "Module 2", answers: mathMod2, startIndex: 0 },
+                                        ].map(({ label, answers, startIndex }) => {
+                                            const s = getStats(answers);
+                                            return (
+                                                <div key={label}>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-bold text-blue-600">{label}</span>
+                                                        <div className="flex items-center gap-3 text-xs text-slate-400">
+                                                            <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 font-medium border border-blue-100">
+                                                                {answers.length} Questions
+                                                            </span>
+                                                            <span>{s.correct} correct · {s.wrong} wrong · {s.omitted} omitted</span>
+                                                        </div>
                                                     </div>
+                                                    <div className="h-px bg-blue-100 mb-1" />
+                                                    {renderGrid(answers, startIndex)}
                                                 </div>
-                                                <div className="h-px bg-blue-100 mb-1" />
-                                                {renderGrid(answers, slice[0])}
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (() => {
+                            );
+                        })() : (() => {
                             const colors = getSectionalColors(activeTest.sectionalSubject);
                             const answers = activeTest.answers || [];
                             const s = getStats(answers);

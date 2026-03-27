@@ -201,7 +201,7 @@ export default function CreateQuestionForm({ tests }: { tests: any[] }) {
 
                     <div className="space-y-4 pt-4 border-t border-slate-100">
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1">Passage *</label>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">Passage</label>
                             <textarea       // Input chỉ cho gõ ở 1 dòng, textarea cho gõ dài
                                 rows={4}    // Mặc định 4 dòng
                                 value={questionForm.passage}   // update vào passae
@@ -338,7 +338,7 @@ export default function CreateQuestionForm({ tests }: { tests: any[] }) {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-1">Explanation</label>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-1">Explanation *</label>
                                         <textarea
                                             rows={2}
                                             required

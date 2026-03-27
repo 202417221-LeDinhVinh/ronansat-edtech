@@ -59,7 +59,7 @@ export const resultService = {
                 path: 'answers.questionId',
                 model: 'Question',
                 // SỬA TẠI ĐÂY: Thêm 'questionType' và 'sprAnswers' vào select để gửi về cho màn hình ReviewPopup
-                select: 'questionText correctAnswer _id imageUrl choices passage domain questionType sprAnswers'
+                select: 'questionText correctAnswer _id imageUrl choices passage domain questionType sprAnswers section module'
             });
 
         return { results };

@@ -18,12 +18,7 @@ export default function Home() {
   const { status } = useSession();
   const router = useRouter();
 
-  // Nếu đã đăng nhập, tự động chuyển thẳng vào Dashboard
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/full-length");
-    }
-  }, [status, router]);
+
 
   if (status === "loading") {
     return <Loading />;
@@ -32,6 +27,10 @@ export default function Home() {
   // Render Landing Page cho người chưa đăng nhập
   return (
     <div className="min-h-screen bg-background font-sans">
+
+
+
+     { status === "unauthenticated" && (      
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -54,7 +53,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </header>
+      </header> )}
 
       <main>
         <HeroSection />
