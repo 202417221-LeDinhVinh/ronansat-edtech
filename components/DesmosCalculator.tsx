@@ -117,6 +117,7 @@ if (absoluteTop + 104 > window.innerHeight) {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);      // Trước dùng setPointerCapture để trói chuột vào tiêu đề, bây giờ mở trói cho nó đi tự do
     };
 
+    /*
     useEffect(() => {    // Chạy khi vừa mở cửa sổ lên và khi isOpen bị thay đổi
         if (!isOpen) return;    // Nếu desmos đang đóng => Dừng, k phí thời gian chạy máy tính ngầm
 
@@ -169,6 +170,56 @@ if (absoluteTop + 104 > window.innerHeight) {
             }
         };
     }, [isOpen]);   // Chỉ chạy khi isOpen bị thay đổi
+*/
+
+
+// Trong components/DesmosCalculator.tsx
+useEffect(() => {
+    if (!isOpen) return; // Nếu đang đóng thì không làm gì cả
+
+    let checkInterval: NodeJS.Timeout; // Tạo một biến để hẹn giờ kiểm tra
+
+    // Hàm thực hiện việc đúc máy tính
+    const initCalculator = () => {
+        // Kiểm tra xem bộ code Desmos đã tải ngầm xong chưa
+        if (window.Desmos && calculatorRef.current && !calculatorInst.current) {
+            calculatorInst.current = window.Desmos.GraphingCalculator(calculatorRef.current, {
+                keypad: true,
+                expressions: true,
+                settingsMenu: true,
+                zoomButtons: true,
+                expressionsTopbar: true,
+                lockViewport: false,
+            });
+            
+            // Nếu đúc xong máy tính rồi thì xóa bỏ cái vòng lặp hẹn giờ đi
+            clearInterval(checkInterval);
+        }
+    };
+
+    // Bước 1: Vừa mở cửa sổ lên là cố gắng khởi động ngay lập tức
+    if (window.Desmos) {
+        initCalculator(); // Nếu mạng nhanh, tải xong rồi thì lắp luôn
+    } else {
+        // Bước 2: Nếu mạng chậm, Desmos chưa về kịp, ta thiết lập chế độ chờ
+        // Cứ mỗi 500 mili-giây (nửa giây), hệ thống lại tự động gọi hàm initCalculator 1 lần
+        checkInterval = setInterval(initCalculator, 500);
+    }
+
+    // Hàm dọn dẹp khi học sinh bấm nút X tắt cửa sổ
+    return () => {
+        // Tắt vòng lặp kiểm tra để đỡ tốn tài nguyên máy
+        if (checkInterval) {
+            clearInterval(checkInterval);
+        }
+        
+        // Đập bỏ máy tính cũ
+        if (calculatorInst.current) {
+            calculatorInst.current.destroy();
+            calculatorInst.current = null;
+        }
+    };
+}, [isOpen]);
 
     // Don't render anything if not open
     if (!isOpen) return null;   // Code dưới sẽ vẽ ra 1 khung cho window Desmos, dòng này chặn, nếu Desmos đang đóng/bị tắt thì không vẽ khung
