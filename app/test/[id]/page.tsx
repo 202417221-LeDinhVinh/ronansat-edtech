@@ -4,6 +4,7 @@ import TestEngine from "@/components/TestEngine";   // Component chứa giao di�
 import { Suspense } from "react"; // 1. Thêm công cụ Suspense của React
 import Loading from "@/components/Loading"; // 2. Thêm component Loading của bạn để làm giao diện chờ
 import Script from 'next/script';
+ // import DownloadPdfButton from '@/components/downloadpdfButton';
 
 export default async function TestPage({ params }: { params: { id: string } }) {     // { params } -> Hệ thống sẽ cho url chứa nhiều data nhưng { params } sẽ destructure data được gửi và chỉ lấy phần params -> Destructuring
                                                                                      // vì đường dẫn file là app/test/[id] => nextjs bảo bất cứ cái gì sau test/ thì gắn nó là id => params sẽ = id để lấy mã bài thi \
@@ -19,8 +20,13 @@ export default async function TestPage({ params }: { params: { id: string } }) {
             src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6" 
             strategy="lazyOnload" 
         />
+        <div className="fixed top-4 right-4 z-[100]">
+        </div>
     <Suspense fallback={<Loading />}>
     <TestEngine testId={id} />
+
+    
+
   </Suspense> 
 
   </>

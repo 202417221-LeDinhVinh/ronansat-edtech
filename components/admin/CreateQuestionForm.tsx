@@ -99,12 +99,22 @@ export default function CreateQuestionForm({ tests }: { tests: any[] }) {
                         payload.correctAnswer = finalAns;
                     }
                 } else if (type === "spr") {
-                    // Chỉ gom sprAnswers cho câu tự luận
-                    const spr = [];
-                    if (row.sprAnswer_0?.trim()) spr.push(row.sprAnswer_0.trim());
-                    if (row.sprAnswer_1?.trim()) spr.push(row.sprAnswer_1.trim());
-                    if (row.sprAnswer_2?.trim()) spr.push(row.sprAnswer_2.trim());
-                    payload.sprAnswers = spr;
+                    // Xử lý thông minh: Nhận cả mảng sprAnswers trực tiếp hoặc các trường lẻ
+                    let spr = [];
+                    
+                    // Nếu JSON đã có sẵn mảng sprAnswers (Giống như file JSON hiện tại của bạn)
+                    if (Array.isArray(row.sprAnswers) && row.sprAnswers.length > 0) {
+                        spr = row.sprAnswers.filter((ans: any) => String(ans).trim() !== "");
+                    } 
+                    // Đề phòng trường hợp JSON cũ viết theo kiểu sprAnswer_0, sprAnswer_1
+                    else {
+                        if (row.sprAnswer_0?.trim()) spr.push(row.sprAnswer_0.trim());
+                        if (row.sprAnswer_1?.trim()) spr.push(row.sprAnswer_1.trim());
+                        if (row.sprAnswer_2?.trim()) spr.push(row.sprAnswer_2.trim());
+                    }
+                    
+                    // Nếu sau khi lọc vẫn không có gì, đưa vào 1 mảng rỗng để Zod không chửi
+                    payload.sprAnswers = spr.length > 0 ? spr : [];
                 }
 
                 return payload;

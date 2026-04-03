@@ -45,13 +45,17 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
             let passage = "";
             let questionText = "";
             let choices: string[] = [];
+            
+            // THÊM MỚI: Khai báo sẵn 2 biến để hứng dữ liệu
+            let questionType: "multiple_choice" | "spr" = "multiple_choice";
+            let sprAnswers: string[] = [];
 
             if (choiceMatches.length > 0) {
-                // There are explicit choices (A, B, C, D)
+                // Nếu tìm thấy các lựa chọn A, B, C, D -> Đây là câu trắc nghiệm
+                questionType = "multiple_choice";
+                
                 const textBeforeChoices = questionPart.substring(0, choiceMatches[0].index).trim();
 
-                // For Reading, usually there's a passage and a question.
-                // We'll try to split them if there's a distinct question at the end (ends with ? or _)
                 const lines = textBeforeChoices.split("\n");
                 let qIndex = lines.length - 1;
                 while (qIndex > 0) {
@@ -65,14 +69,12 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
                     passage = lines.slice(0, qIndex).join("\n").trim();
                     questionText = lines.slice(qIndex).join("\n").trim();
                 } else if (qIndex > 0 && sectionName === "Math" && lines.length > 3) {
-                    // specific case for Math questions with long prefix text like table data
                     passage = lines.slice(0, qIndex).join("\n").trim();
                     questionText = lines.slice(qIndex).join("\n").trim();
                 } else {
                     questionText = textBeforeChoices;
                 }
 
-                // Extract choices
                 for (let i = 0; i < choiceMatches.length; i++) {
                     const letter = choiceMatches[i][1];
                     const startIdx = choiceMatches[i].index! + choiceMatches[i][0].length;
@@ -81,7 +83,8 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
                     choices.push(choiceText || "[Image/Equation missing from PDF]");
                 }
             } else {
-                // Grid-in question (no choices)
+                // FIX: Nếu không có lựa chọn A,B,C,D -> Đây là câu tự luận (Grid-in/SPR)
+                questionType = "spr";
                 questionText = questionPart;
             }
 
@@ -99,6 +102,15 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
                 rationalePart = parts[1];
             }
 
+            // FIX: Phân loại đáp án dựa vào loại câu hỏi
+            if (questionType === "spr") {
+                // Nếu là tự luận, nhét đáp án vào mảng sprAnswers
+                if (correctAnswer) {
+                    sprAnswers.push(correctAnswer);
+                }
+                correctAnswer = ""; // Xóa correctAnswer đi cho đúng chuẩn tự luận
+            }
+
             // Extract Rationale
             const rationaleEndSplit = rationalePart.split(/\nQuestion Difficulty:\n|\nAssessment\n/);
             let explanation = rationaleEndSplit[0].trim();
@@ -113,26 +125,35 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
                 difficulty = difficultyMatch[1].toLowerCase();
             }
 
-            // Check required fields
             if (!questionText) {
                 console.warn(`Skipping question ${idMatch?.[1]} due to missing text`);
                 continue;
             }
-            if (!correctAnswer) {
+            // Sửa lỗi cảnh báo bỏ qua câu hỏi nếu nó là SPR và correctAnswer bị làm trống
+            if (questionType === "multiple_choice" && !correctAnswer) {
                 console.warn(`Skipping question ${idMatch?.[1]} due to missing correct answer`);
                 continue;
             }
+            if (questionType === "spr" && sprAnswers.length === 0) {
+                 console.warn(`Skipping question ${idMatch?.[1]} due to missing SPR answer`);
+                 continue;
+            }
+
             if (!explanation) explanation = "No explanation provided.";
 
+            // FIX: Đóng gói đầy đủ dữ liệu trước khi gửi lên database
             let q: Partial<IQuestion> = {
                 section: sectionName,
+                module: 1, // FIX: Schema yêu cầu module phải là number (required: true), nếu thiếu dòng này DB sẽ báo lỗi.
+                questionType: questionType, // Đã thêm
                 questionText,
                 passage,
-                choices, // could be empty array for grid-ins
-                correctAnswer,
+                choices, 
+                correctAnswer: correctAnswer || undefined, // Nếu là chuỗi rỗng thì bỏ qua
+                sprAnswers: sprAnswers, // Đã thêm
                 explanation,
                 difficulty: difficulty as any,
-                points: difficulty === "easy" ? 10 : (difficulty === "medium" ? 20 : 30) // give some points logic
+                points: difficulty === "easy" ? 10 : (difficulty === "medium" ? 20 : 30)
             };
 
             questions.push(q);

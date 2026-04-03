@@ -1,67 +1,197 @@
+import mongoose from "mongoose";
+
 import dbConnect from "@/lib/mongodb";
+import Question from "@/lib/models/Question";
 import Result from "@/lib/models/Result";
-import User, { IUser } from "@/lib/models/User";
+import Test from "@/lib/models/Test";
+import User from "@/lib/models/User";
+import { ResultValidationSchema } from "@/lib/schema/result";
+
+type ValidatedAnswer = {
+  questionId: string;
+  userAnswer?: string | null;
+};
+
+function normalizeAnswer(value?: string | null) {
+  return value?.trim() || "Omitted";
+}
+
+function isAnswerCorrect(question: {
+  questionType?: string;
+  correctAnswer?: string;
+  sprAnswers?: string[];
+}, userAnswer: string) {
+  if (!userAnswer || userAnswer === "Omitted") {
+    return false;
+  }
+
+  if (question.questionType === "spr") {
+    return (
+      question.sprAnswers?.some((accepted) => accepted.trim().toLowerCase() === userAnswer.trim().toLowerCase()) ??
+      false
+    );
+  }
+
+  return userAnswer === question.correctAnswer;
+}
+
+function buildDateFilter(days?: number) {
+  if (!days || !Number.isFinite(days) || days <= 0 || days > 365) {
+    return undefined;
+  }
+
+  const dateLimit = new Date();
+  dateLimit.setDate(dateLimit.getDate() - days);
+  return { $gte: dateLimit };
+}
 
 export const resultService = {
-    async createResult(userId: string, data: any) {
-        await dbConnect();
+  async createResult(userId: string, data: unknown) {
+    const validatedData = ResultValidationSchema.parse(data);
 
-        const newResult = await Result.create({
-            ...data,
-            userId: userId,
-        });
-
-        // Update User Stats
-        const user = await User.findById(userId);
-        if (user) {
-            user.testsTaken.push(data.testId);
-
-            // THÊM ĐIỀU KIỆN MỚI: Chỉ cập nhật điểm cao nhất nếu KHÔNG PHẢI bài thi Sectional (vì Sectional điểm tính theo số câu đúng, không phải thang 1600)
-            if (!data.isSectional && data.score && data.score > (user.highestScore || 0)) {
-                user.highestScore = data.score;
-            }
-            
-            const now = new Date();
-            user.lastTestDate = now;
-
-            // Gather wrong question IDs
-            const wrongIds = data.answers
-                .filter((ans: any) => !ans.isCorrect)
-                .map((ans: any) => ans.questionId);
-
-            user.wrongQuestions.push(...wrongIds);
-
-            await user.save();
-        }
-
-        return newResult;
-    },
-
-    async getUserResults(userId: string, days?: number) {
-        await dbConnect();
-
-        // Ensure Question model is registered before populating
-        require("@/lib/models/Question");
-        require("@/lib/models/Test");
-
-        let query: any = { userId: userId };
-
-        if (days) {
-            const dateLimit = new Date();
-            dateLimit.setDate(dateLimit.getDate() - days);
-            query.createdAt = { $gte: dateLimit };
-        }
-
-        const results = await Result.find(query)
-            .sort({ createdAt: -1 })
-            .populate('testId', 'title') 
-            .populate({
-                path: 'answers.questionId',
-                model: 'Question',
-                // SỬA TẠI ĐÂY: Thêm 'questionType' và 'sprAnswers' vào select để gửi về cho màn hình ReviewPopup
-                select: 'questionText correctAnswer _id imageUrl choices passage domain questionType sprAnswers section module'
-            });
-
-        return { results };
+    if (!mongoose.Types.ObjectId.isValid(validatedData.testId)) {
+      throw new Error("Invalid test ID");
     }
+
+    await dbConnect();
+
+    const [test, user] = await Promise.all([
+      Test.findById(validatedData.testId).lean(),
+      User.findById(userId),
+    ]);
+
+    if (!test) {
+      throw new Error("Test not found");
+    }
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const answerIds = validatedData.answers.map((answer) => answer.questionId);
+    if (answerIds.length === 0 || answerIds.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+      throw new Error("Invalid answers payload");
+    }
+
+    const questions = await Question.find({
+      _id: { $in: answerIds },
+      testId: validatedData.testId,
+    }).lean();
+
+    if (questions.length !== answerIds.length) {
+      throw new Error("One or more questions are invalid for this test");
+    }
+
+    const questionMap = new Map(questions.map((question) => [question._id.toString(), question]));
+
+    const gradedAnswers = validatedData.answers.map((answer: ValidatedAnswer) => {
+      const question = questionMap.get(answer.questionId);
+      if (!question) {
+        throw new Error("Question mismatch detected");
+      }
+
+      const normalizedUserAnswer = normalizeAnswer(answer.userAnswer);
+      const isCorrect = isAnswerCorrect(question, normalizedUserAnswer);
+
+      return {
+        questionId: question._id,
+        userAnswer: normalizedUserAnswer,
+        isCorrect,
+      };
+    });
+
+    const isSectional = Boolean(validatedData.isSectional);
+    const correctCount = gradedAnswers.filter((answer) => answer.isCorrect).length;
+
+    let score: number | undefined;
+    let sectionBreakdown: { readingAndWriting?: number; math?: number } | undefined;
+    let totalScore: number | undefined;
+    let readingScore: number | undefined;
+    let mathScore: number | undefined;
+
+    if (isSectional) {
+      totalScore = correctCount;
+      readingScore = validatedData.sectionalSubject === "Reading and Writing" ? correctCount : 0;
+      mathScore = validatedData.sectionalSubject === "Math" ? correctCount : 0;
+    } else {
+      let earnedReadingPoints = 0;
+      let earnedMathPoints = 0;
+
+      gradedAnswers.forEach((answer) => {
+        if (!answer.isCorrect) {
+          return;
+        }
+
+        const question = questionMap.get(answer.questionId.toString());
+        const points = question?.points || 0;
+
+        if (question?.section === "Reading and Writing") {
+          earnedReadingPoints += points;
+        } else if (question?.section === "Math") {
+          earnedMathPoints += points;
+        }
+      });
+
+      readingScore = Math.min(200 + earnedReadingPoints, 800);
+      mathScore = Math.min(200 + earnedMathPoints, 800);
+      score = readingScore + mathScore;
+      sectionBreakdown = {
+        readingAndWriting: readingScore,
+        math: mathScore,
+      };
+    }
+
+    const newResult = await Result.create({
+      userId,
+      testId: validatedData.testId,
+      isSectional,
+      sectionalSubject: validatedData.sectionalSubject,
+      sectionalModule: validatedData.sectionalModule,
+      answers: gradedAnswers,
+      score,
+      sectionBreakdown,
+      totalScore,
+      readingScore,
+      mathScore,
+    });
+
+    user.testsTaken.push(new mongoose.Types.ObjectId(validatedData.testId));
+
+    if (!isSectional && score && score > (user.highestScore || 0)) {
+      user.highestScore = score;
+    }
+
+    user.lastTestDate = new Date();
+
+    const wrongIds = gradedAnswers.filter((answer) => !answer.isCorrect).map((answer) => answer.questionId);
+    user.wrongQuestions.push(...wrongIds);
+    await user.save();
+
+    return newResult;
+  },
+
+  async getUserResults(userId: string, days?: number) {
+    await dbConnect();
+
+    const query: {
+      userId: string;
+      createdAt?: { $gte: Date };
+    } = { userId };
+
+    const createdAtFilter = buildDateFilter(days);
+    if (createdAtFilter) {
+      query.createdAt = createdAtFilter;
+    }
+
+    const results = await Result.find(query)
+      .sort({ createdAt: -1 })
+      .populate("testId", "title")
+      .populate({
+        path: "answers.questionId",
+        model: "Question",
+        select: "questionText correctAnswer _id imageUrl choices passage domain questionType sprAnswers section module",
+      });
+
+    return { results };
+  },
 };

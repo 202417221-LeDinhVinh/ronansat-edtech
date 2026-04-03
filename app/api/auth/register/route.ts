@@ -1,41 +1,68 @@
-import { NextResponse } from "next/server";     // Thư viện đóng gói câu trả lời gửi tới User (thành công/lỗi)
-import bcrypt from "bcryptjs";                  // Hash, mã hóa mật khẩu
-import dbConnect from "@/lib/mongodb";          // Kết nối database
-import User from "@/lib/models/User";           // Khuôn User
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 
-export async function POST(req: Request) {    // Chờ user nhấn đăng ký để gửi req chứa các thông tin lên máy chủ
-    try {
-        const { email, password, name } = await req.json();   // Lấy email, password, name từ request ở dạng json  
+import dbConnect from "@/lib/mongodb";
+import User from "@/lib/models/User";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { isValidEmail, normalizeEmail, validatePasswordStrength } from "@/lib/security";
 
-        if (!email || !password || !name) {   // Thiếu bất kỳ thông tin nào = lỗi
-            return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
-        }
+const registerSchema = z.object({
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
+  name: z.string().trim().min(2).max(80),
+});
 
-        await dbConnect();
+export async function POST(req: Request) {
+  try {
+    const rateLimit = checkRateLimit(`register:${getClientIp(req)}`, {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
 
-        const existingUser = await User.findOne({ email });    // Dựa vào email check email đã tồn tại trong DB chưa
-        if (existingUser) {    // Tồn tại thì lỗi trùng email
-            return NextResponse.json({ message: "User already exists" }, { status: 409 });
-        }
-
-        // Không trùng or thiếu => Hợp lệ => Hash mật khẩu
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newUser = await User.create({    // Tạo 1 user
-            email,     // Cách viết tắt, bản chất vẫn là email: email
-            password: hashedPassword,
-            name,
-            role: "user",
-        });   
-
-        return NextResponse.json(
-            { message: "User registered successfully", userId: newUser._id },
-            { status: 201 }
-        );
-    } catch (error: any) {
-        return NextResponse.json(
-            { message: "Internal server error", error: error.message },
-            { status: 500 }
-        );
+    if (!rateLimit.success) {
+      return NextResponse.json({ message: "Too many registration attempts" }, { status: 429 });
     }
+
+    const parsed = registerSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Invalid registration payload" }, { status: 400 });
+    }
+
+    const email = normalizeEmail(parsed.data.email);
+    const { password, name } = parsed.data;
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ message: "Invalid email address" }, { status: 400 });
+    }
+
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return NextResponse.json({ message: passwordError }, { status: 400 });
+    }
+
+    await dbConnect();
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return NextResponse.json({ message: "User already exists" }, { status: 409 });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newUser = await User.create({
+      email,
+      password: hashedPassword,
+      name: name.trim(),
+      role: "user",
+    });
+
+    return NextResponse.json(
+      { message: "User registered successfully", userId: newUser._id },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("POST /api/auth/register error:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }
