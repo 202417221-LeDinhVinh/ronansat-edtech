@@ -98,10 +98,20 @@ export async function GET(req: NextRequest) {
       sectionName,
     });
 
-   browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: true, // Ép trình duyệt luôn chạy ngầm
+   // Kiểm tra xem ứng dụng đang chạy trên máy tính cá nhân hay trên mạng
+    const isLocal = process.env.NODE_ENV === 'development';
+
+    browser = await puppeteer.launch({
+      // Nếu chạy ở máy tính, không dùng các tham số ép buộc của đám mây
+      args: isLocal ? [] : chromium.args,
+      
+      // Nếu ở máy tính cá nhân, dùng Chrome có sẵn. Nếu lên Vercel, dùng sparticuz.
+      // LƯU Ý: Nếu đường dẫn Chrome của bạn khác dòng dưới, hãy sửa lại phần chữ màu cam nhé.
+      executablePath: isLocal 
+        ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" 
+        : await chromium.executablePath(),
+        
+      headless: true, // Luôn chạy ngầm không hiện cửa sổ
     });
 
     const page = await browser.newPage();
