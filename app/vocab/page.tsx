@@ -336,8 +336,6 @@ export default function VocabPage() {
               <div className="text-[12px] text-slate-500">Vocabulary collections and boards</div>
             </div>
           </div>
-
-          
         </div>
 
         <section className="rounded-[28px] border border-white/75 bg-white/38 p-3 shadow-[0_18px_50px_rgba(148,163,184,0.14)] backdrop-blur-xl">
@@ -363,11 +361,11 @@ export default function VocabPage() {
               title={
                 <ColumnHeader
                   icon={<Inbox className="h-4 w-4" />}
-                  title="Hộp từ điển"
-                  subtitle={`${inboxCards.length} thẻ`}
+                  title="Inbox"
+                  subtitle={`${inboxCards.length} cards`}
                   menuButton={
                     <ColumnActionButton
-                      onClick={() => openFlashCards("inbox", "Hộp từ điển", inboxCards)}
+                      onClick={() => openFlashCards("inbox", "Inbox", inboxCards)}
                       disabled={inboxCards.length === 0}
                     />
                   }
@@ -376,9 +374,9 @@ export default function VocabPage() {
               onDrop={() => draggingCardId && moveCard(draggingCardId, "inbox")}
             >
               {!hydrated ? (
-                <BoardEmptyState text="Äang táº£i..." />
+                <BoardEmptyState text="Loading..." />
               ) : inboxCards.length === 0 ? (
-                <BoardEmptyState text="ChÆ°a cÃ³ tá»« nÃ o Ä‘Æ°á»£c lÆ°u." />
+                <BoardEmptyState text="No words saved yet." />
               ) : (
                 inboxCards.map((card) => (
                   <EditableVocabCard
@@ -473,7 +471,7 @@ export default function VocabPage() {
                                     Flash Card
                                   </button>
                                   <div className="px-2 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                    Màu cột
+                                    Column Color
                                   </div>
                                   <div className="flex flex-wrap gap-2 px-2 pb-2">
                                     {VOCAB_COLUMN_COLOR_KEYS.map((colorKey) => (
@@ -487,7 +485,7 @@ export default function VocabPage() {
                                         className={`h-7 w-7 rounded-full border border-white shadow-sm ${COLUMN_THEME[colorKey].accent} ${
                                           colorKey === column.colorKey ? "ring-2 ring-slate-300" : ""
                                         }`}
-                                        title={`Đổi màu ${colorKey}`}
+                                        title={`Change color ${colorKey}`}
                                       />
                                     ))}
                                   </div>
@@ -499,7 +497,7 @@ export default function VocabPage() {
                                     }}
                                     className="flex w-full items-center rounded-[12px] px-3 py-2 text-left text-[13px] font-medium text-rose-500 transition hover:bg-rose-50"
                                   >
-                                    Xóa cột
+                                    Delete Column
                                   </button>
                                 </div>
                               ) : null}
@@ -517,7 +515,7 @@ export default function VocabPage() {
                     onHeaderDrop={() => handleColumnDrop(column.id)}
                   >
                     {column.cardIds.length === 0 ? (
-                      <BoardEmptyState text="Chưa có thẻ nào." />
+                      <BoardEmptyState text="No cards yet." />
                     ) : (
                       columnCards.map((card) => (
                         <EditableVocabCard
@@ -571,7 +569,7 @@ export default function VocabPage() {
                         setIsAddingColumn(false);
                       }
                     }}
-                    placeholder="TÃªn danh sÃ¡ch má»›i"
+                    placeholder="New list name"
                     className="w-full rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 text-[14px] text-slate-900 outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                   />
                   <div className="mt-3 flex items-center gap-3">
@@ -580,7 +578,7 @@ export default function VocabPage() {
                       onClick={handleCreateColumn}
                       className="rounded-full bg-[#0071e3] px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-[#0077ed]"
                     >
-                      Táº¡o danh sÃ¡ch
+                      Create list
                     </button>
                     <button
                       type="button"
@@ -590,7 +588,7 @@ export default function VocabPage() {
                       }}
                       className="text-[13px] font-medium text-slate-500 transition hover:text-slate-900"
                     >
-                      Há»§y
+                      Cancel
                     </button>
                   </div>
                 </div>
@@ -601,7 +599,7 @@ export default function VocabPage() {
                   className="flex w-full items-center gap-2 rounded-[18px] border border-dashed border-slate-200 bg-white/52 px-4 py-3.5 text-left shadow-[0_12px_30px_rgba(148,163,184,0.1)] backdrop-blur-xl transition hover:bg-white/76"
                 >
                   <Plus className="h-4.5 w-4.5 text-slate-700" />
-                  <span className="text-[15px] font-medium tracking-[-0.02em] text-slate-800">ThÃªm danh sÃ¡ch khÃ¡c</span>
+                  <span className="text-[15px] font-medium tracking-[-0.02em] text-slate-800">Add another list</span>
                 </button>
               )}
             </div>
@@ -801,7 +799,7 @@ function EditableVocabCard({
           <button
             type="button"
             onClick={onRemove}
-            title="ÄÃ¡nh dáº¥u hoÃ n thÃ nh"
+            title="Mark as complete"
             className="rounded-full p-0.5 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:text-sky-500"
           >
             <CheckCircle2 className="h-4.5 w-4.5" />
@@ -835,7 +833,7 @@ function AddCardComposer({
         className="flex w-full items-center gap-2 rounded-[14px] px-2 py-2 text-left text-[14px] font-medium text-slate-500 transition hover:bg-white/50 hover:text-slate-900"
       >
         <Plus className="h-4 w-4" />
-        ThÃªm tháº»
+        Add card
       </button>
     );
   }
@@ -845,7 +843,7 @@ function AddCardComposer({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Nháº­p ná»™i dung vocab má»›i"
+        placeholder="Enter new vocab content"
         className="min-h-[86px] w-full resize-none rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 text-[14px] leading-6 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
       />
       <div className="mt-2.5 flex items-center gap-3">
@@ -854,9 +852,9 @@ function AddCardComposer({
           onClick={onAdd}
           className="rounded-full bg-[#0071e3] px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-[#0077ed]"
         >
-          ThÃªm tháº»
+          Add card
         </button>
-        <button type="button" onClick={onClose} className="text-slate-500 transition hover:text-slate-900" aria-label="ÄÃ³ng">
+        <button type="button" onClick={onClose} className="text-slate-500 transition hover:text-slate-900" aria-label="Close">
           <X className="h-4.5 w-4.5" />
         </button>
       </div>
@@ -875,10 +873,6 @@ function ColumnDropIndicator() {
     </div>
   );
 }
-
-
-
-
 
 function FlashCardOverlay({
   title,
@@ -909,14 +903,14 @@ function FlashCardOverlay({
         <div>
           <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</div>
           <div className="mt-2 text-[18px] font-semibold tracking-[-0.03em] text-slate-950">
-            Từ {currentIndex + 1} / {total}
+            Word {currentIndex + 1} / {total}
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-700 shadow-[0_12px_28px_rgba(148,163,184,0.18)] transition hover:bg-white"
-          aria-label="Đóng flash card"
+          aria-label="Close flash card"
         >
           <X className="h-5 w-5" />
         </button>
@@ -930,10 +924,10 @@ function FlashCardOverlay({
         >
           <div className="w-full">
             <div className="mb-5 text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              {isAnswerVisible ? "Nghĩa" : "Từ vựng"}
+              {isAnswerVisible ? "Meaning" : "Vocabulary"}
             </div>
             <div className="whitespace-pre-wrap break-words text-[clamp(2rem,4.2vw,4.5rem)] font-semibold tracking-[-0.05em] text-slate-950">
-              {isAnswerVisible ? meaning || "Không có nghĩa được tách." : vocabulary}
+              {isAnswerVisible ? meaning || "No separated meaning." : vocabulary}
             </div>
           </div>
         </button>
@@ -944,7 +938,7 @@ function FlashCardOverlay({
               type="button"
               onClick={onPrevious}
               className="flex h-14 w-14 items-center justify-center rounded-full border border-white/80 bg-white/88 text-slate-700 shadow-[0_14px_30px_rgba(148,163,184,0.2)] transition hover:bg-white"
-              aria-label="Flash card trước"
+              aria-label="Previous flash card"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
@@ -957,7 +951,7 @@ function FlashCardOverlay({
               type="button"
               onClick={onNext}
               className="flex h-14 w-14 items-center justify-center rounded-full border border-white/80 bg-white/88 text-slate-700 shadow-[0_14px_30px_rgba(148,163,184,0.2)] transition hover:bg-white"
-              aria-label="Flash card tiếp theo"
+              aria-label="Next flash card"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
