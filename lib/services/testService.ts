@@ -1,79 +1,81 @@
-// Thêm thư viện Question model vào đầu file
-import dbConnect from "@/lib/mongodb";
-import Test from "@/lib/models/Test";
-import Question from "@/lib/models/Question"; // Thêm dòng này để gọi được bảng Question
-import { TestValidationSchema } from "@/lib/schema/test";
 import { z } from "zod";
 
+import dbConnect from "@/lib/mongodb";
+import Question from "@/lib/models/Question";
+import Test from "@/lib/models/Test";
+import { TestValidationSchema, type TestInput } from "@/lib/schema/test";
+
+type SortableTestField = "createdAt" | "title";
+
 export const testService = {
-    async getTests(page: number, limit: number, sortBy: string, sortOrder: string) {
-        await dbConnect();
+  async getTests(page: number, limit: number, sortBy: string, sortOrder: string) {
+    await dbConnect();
 
-        const skip = (page - 1) * limit;
-        const sortObj: any = {};
-        sortObj[sortBy] = sortOrder === "asc" ? 1 : -1;
+    const skip = (page - 1) * limit;
+    const normalizedSortBy: SortableTestField = sortBy === "title" ? "title" : "createdAt";
+    const normalizedSortOrder = sortOrder === "asc" ? 1 : -1;
+    const sortObj: Record<SortableTestField, 1 | -1> = {
+      createdAt: normalizedSortBy === "createdAt" ? normalizedSortOrder : -1,
+      title: normalizedSortBy === "title" ? normalizedSortOrder : 1,
+    };
 
-        const totalTests = await Test.countDocuments({});
-        // Thêm .lean() để chuyển dữ liệu MongoDB thành JSON thuần túy, dễ thêm trường mới
-        const tests = await Test.find({}).sort(sortObj).skip(skip).limit(limit).lean();
+    const totalTests = await Test.countDocuments({});
+    const tests = await Test.find({}).sort(sortObj).skip(skip).limit(limit).lean();
 
-        // Lấy danh sách ID của các bài test trong trang hiện tại
-        const testIds = tests.map(t => t._id);
+    const testIds = tests.map((test) => test._id);
+    const questionCountsData = await Question.aggregate([
+      { $match: { testId: { $in: testIds } } },
+      {
+        $group: {
+          _id: { testId: "$testId", section: "$section", module: "$module" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
 
-        // Gom nhóm (aggregate) để đếm số câu hỏi của từng bài test chia theo section và module
-        const questionCountsData = await Question.aggregate([
-            { $match: { testId: { $in: testIds } } },
-            {
-                $group: {
-                    _id: { testId: "$testId", section: "$section", module: "$module" },
-                    count: { $sum: 1 }
-                }
-            }
-        ]);
+    const testsWithCounts = tests.map((test) => {
+      const counts = { rw_1: 0, rw_2: 0, math_1: 0, math_2: 0 };
 
-        // Gắn số liệu vừa đếm được vào từng bài test
-        const testsWithCounts = tests.map((test: any) => {
-            const counts = { rw_1: 0, rw_2: 0, math_1: 0, math_2: 0 };
-            
-            questionCountsData.forEach(qc => {
-                if (qc._id.testId.toString() === test._id.toString()) {
-                    // Chuyển đổi tên section thành prefix viết tắt (rw hoặc math)
-                    const secStr = qc._id.section === "Reading and Writing" ? "rw" : "math";
-                    // Lắp đúng format (ví dụ: rw_1, math_2)
-                    const key = `${secStr}_${qc._id.module}` as keyof typeof counts;
-                    counts[key] = qc.count;
-                }
-            });
-
-            return { ...test, questionCounts: counts };
-        });
-
-        return {
-            tests: testsWithCounts, // Trả về danh sách bài test đã kèm bộ đếm
-            pagination: {
-                total: totalTests,
-                page,
-                limit,
-                totalPages: Math.ceil(totalTests / limit)
-            }
-        };
-    },
-
-    async createTest(data: any) {
-        // ... (Giữ nguyên phần này)
-        try {
-            const validatedData = TestValidationSchema.parse(data);
-            await dbConnect();
-            const newTest = await Test.create(validatedData);
-            return newTest;
-        } catch (error: any) {
-            if (error instanceof z.ZodError) {
-                const err: any = new Error("Validation Error");
-                err.errors = (error as any).errors;
-                err.name = "ZodError";
-                throw err;
-            }
-            throw error;
+      questionCountsData.forEach((questionCount) => {
+        if (questionCount._id.testId.toString() === test._id.toString()) {
+          const sectionPrefix = questionCount._id.section === "Reading and Writing" ? "rw" : "math";
+          const key = `${sectionPrefix}_${questionCount._id.module}` as keyof typeof counts;
+          counts[key] = questionCount.count;
         }
+      });
+
+      return { ...test, questionCounts: counts };
+    });
+
+    return {
+      tests: testsWithCounts,
+      pagination: {
+        total: totalTests,
+        page,
+        limit,
+        totalPages: Math.ceil(totalTests / limit),
+      },
+    };
+  },
+
+  async createTest(data: unknown) {
+    try {
+      const validatedData: TestInput = TestValidationSchema.parse(data);
+      await dbConnect();
+      const newTest = await Test.create(validatedData);
+      return newTest;
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        const validationError = new Error("Validation Error") as Error & {
+          errors: z.ZodIssue[];
+          name: string;
+        };
+        validationError.errors = error.issues;
+        validationError.name = "ZodError";
+        throw validationError;
+      }
+
+      throw error;
     }
+  },
 };

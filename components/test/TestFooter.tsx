@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Flag, MapPin, X } from "lucide-react";
+import { Bookmark, ChevronDown, MapPin, X } from "lucide-react";
 
 interface TestFooterProps {
     moduleName?: string;
@@ -67,12 +67,12 @@ export default function TestFooter({
                                 <span>Unanswered</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <Flag className="h-3.5 w-3.5 fill-[#d9485f] text-[#d9485f]" />
+                                <Bookmark className="h-3 w-3 fill-[#d9485f] text-[#d9485f]" strokeWidth={1.9} />
                                 <span>For Review</span>
                             </div>
                         </div>
 
-                        <div className="mx-auto mt-4 flex max-h-[196px] w-full max-w-[500px] flex-wrap justify-start gap-x-[14px] gap-y-[18px] overflow-y-auto px-1 pb-1">
+                        <div className="mx-auto mt-4 flex max-h-[196px] w-full max-w-[500px] flex-wrap justify-start gap-x-[14px] gap-y-[18px] overflow-y-auto px-1 pb-1 pt-3">
                             {questions.map((q, i) => {
                                 const isAnswered = !!answers[q._id];
                                 const isFlagged = !!flagged[q._id];
@@ -86,25 +86,20 @@ export default function TestFooter({
                                             onJump(i);
                                             setIsGridOpen(false);
                                         }}
-                                        className={`relative flex h-[30px] w-[30px] shrink-0 items-center justify-center text-[14px] font-semibold transition-all ${
-                                            isCurrent
-                                                ? "border border-slate-700 bg-white text-[#3557d6] shadow-[0_0_0_1px_rgba(31,41,55,0.06)]"
-                                                : isAnswered
-                                                    ? "border border-[#8aa1ff] bg-[#eef2ff] text-[#3557d6] hover:border-[#5d7cff]"
-                                                    : "border border-dashed border-slate-500 bg-white text-[#3557d6] hover:border-slate-700"
+                                        className={`relative flex h-[30px] w-[30px] shrink-0 items-center justify-center overflow-visible text-[14px] font-semibold transition-all ${
+                                            isAnswered
+                                                ? "border border-[#3557d6] bg-[#3557d6] text-white shadow-[0_0_0_1px_rgba(53,87,214,0.12)]"
+                                                : "border border-dashed border-slate-500 bg-white text-[#3557d6] hover:border-slate-700"
                                         }`}
                                         aria-label={`Jump to question ${i + 1}`}
                                     >
                                         {isCurrent ? (
-                                            <MapPin className="pointer-events-none absolute -top-[13px] left-1/2 h-4 w-4 -translate-x-1/2 text-slate-700" strokeWidth={2} />
+                                            <MapPin className="pointer-events-none absolute -top-[15px] left-1/2 h-4 w-4 -translate-x-1/2 text-slate-700" strokeWidth={2} />
                                         ) : null}
                                         <span>{i + 1}</span>
-                                        {isAnswered && !isCurrent ? (
-                                            <Check className="pointer-events-none absolute right-[1px] top-[1px] h-2.5 w-2.5 text-[#3557d6] opacity-70" />
-                                        ) : null}
                                         {isFlagged ? (
-                                            <div className="pointer-events-none absolute -right-[5px] -top-[6px] rounded-full bg-white p-[1px]">
-                                                <Flag className="h-3 w-3 fill-[#d9485f] text-[#d9485f]" />
+                                            <div className="pointer-events-none absolute -right-[3px] -top-[6px]">
+                                                <Bookmark className="h-3 w-3 fill-[#d9485f] text-[#d9485f] drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]" strokeWidth={1.9} />
                                             </div>
                                         ) : null}
                                     </button>

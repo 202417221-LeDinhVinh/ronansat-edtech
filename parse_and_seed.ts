@@ -25,9 +25,7 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
             // First let's extract the ID line if it's there
             let content = block;
             const idMatch = content.match(/^ID:\s*([a-f0-9]+)\n/i);
-            let id = "";
             if (idMatch) {
-                id = idMatch[1];
                 content = content.replace(idMatch[0], "");
             }
 
@@ -35,20 +33,20 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
             const answerSplit = content.split(/ID:\s*[a-f0-9]+\s*Answer\n/i);
             if (answerSplit.length < 2) continue; // Malformed
 
-            let questionPart = answerSplit[0].trim();
+            const questionPart = answerSplit[0].trim();
             const answerPart = answerSplit[1].trim();
 
             // Extract the question, passage, and choices
             const choiceRegex = /\n([A-D])\.\s/g;
-            let choiceMatches = [...questionPart.matchAll(choiceRegex)];
+            const choiceMatches = [...questionPart.matchAll(choiceRegex)];
 
             let passage = "";
             let questionText = "";
-            let choices: string[] = [];
+            const choices: string[] = [];
             
             // THÊM MỚI: Khai báo sẵn 2 biến để hứng dữ liệu
             let questionType: "multiple_choice" | "spr" = "multiple_choice";
-            let sprAnswers: string[] = [];
+            const sprAnswers: string[] = [];
 
             if (choiceMatches.length > 0) {
                 // Nếu tìm thấy các lựa chọn A, B, C, D -> Đây là câu trắc nghiệm
@@ -76,7 +74,6 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
                 }
 
                 for (let i = 0; i < choiceMatches.length; i++) {
-                    const letter = choiceMatches[i][1];
                     const startIdx = choiceMatches[i].index! + choiceMatches[i][0].length;
                     const endIdx = i < choiceMatches.length - 1 ? choiceMatches[i + 1].index : questionPart.length;
                     const choiceText = questionPart.substring(startIdx, endIdx).trim();
@@ -120,9 +117,9 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
 
             // Extract Difficulty
             const difficultyMatch = rationalePart.match(/Question Difficulty:\n(Easy|Medium|Hard)/i);
-            let difficulty = "medium";
+            let difficulty: IQuestion["difficulty"] = "medium";
             if (difficultyMatch) {
-                difficulty = difficultyMatch[1].toLowerCase();
+                difficulty = difficultyMatch[1].toLowerCase() as IQuestion["difficulty"];
             }
 
             if (!questionText) {
@@ -142,7 +139,7 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
             if (!explanation) explanation = "No explanation provided.";
 
             // FIX: Đóng gói đầy đủ dữ liệu trước khi gửi lên database
-            let q: Partial<IQuestion> = {
+            const q: Partial<IQuestion> = {
                 section: sectionName,
                 module: 1, // FIX: Schema yêu cầu module phải là number (required: true), nếu thiếu dòng này DB sẽ báo lỗi.
                 questionType: questionType, // Đã thêm
@@ -152,7 +149,7 @@ function parseText(text: string, sectionName: string): Partial<IQuestion>[] {
                 correctAnswer: correctAnswer || undefined, // Nếu là chuỗi rỗng thì bỏ qua
                 sprAnswers: sprAnswers, // Đã thêm
                 explanation,
-                difficulty: difficulty as any,
+                difficulty,
                 points: difficulty === "easy" ? 10 : (difficulty === "medium" ? 20 : 30)
             };
 
@@ -221,8 +218,6 @@ async function main() {
 
             const newTest = await Test.create({
                 title: `Imported SAT Practice Test ${testCount++}`,
-                timeLimit: 134,
-                difficulty: "medium",
                 sections: [
                     { name: "Reading and Writing", questionsCount: readingCount, timeLimit: 64 },
                     { name: "Math", questionsCount: mathCount, timeLimit: 70 },
@@ -239,7 +234,7 @@ async function main() {
             const inserted = await Question.insertMany(questionsToInsert);
             console.log(`Inserted ${inserted.length} questions for Test ${newTest._id}`);
 
-            newTest.questions = inserted.map(q => q._id as any);
+            newTest.questions = inserted.map(q => q._id);
             await newTest.save();
         }
 
