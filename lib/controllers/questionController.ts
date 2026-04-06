@@ -15,7 +15,16 @@
                 const testId = searchParams.get("testId");       // testId = 123 lấy từ searchParams
 
                 const questions = await questionService.getQuestions(testId);   // Gọi service lấy mảng câu hỏi và gán vào questions
-                return NextResponse.json({ questions });
+                return NextResponse.json(
+                    { questions },
+                    {
+                        headers: {
+                            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                            Pragma: "no-cache",
+                            Expires: "0",
+                        },
+                    }
+                );
             } catch (error: any) {
                 return NextResponse.json({ error: error.message }, { status: 500 });
             }

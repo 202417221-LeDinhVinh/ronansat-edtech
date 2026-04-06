@@ -62,10 +62,18 @@ export function useTestEngine(testId: string) {
 
   useEffect(() => {
     const fetchQuestions = async () => {
+      setLoading(true);
       try {
-        const res = await api.get(API_PATHS.getQuestionsByTestId(testId));
+        const res = await api.get(API_PATHS.getQuestionsByTestId(testId), {
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        });
+
         const fetchedQuestions = res.data.questions || [];
         setQuestions(fetchedQuestions);
+        setCurrentIndex(0);
 
         const validStages = testStages
           .map((stage, index) => ({ ...stage, originalIndex: index }))
@@ -87,6 +95,9 @@ export function useTestEngine(testId: string) {
 
           setCurrentStageIndex(startIndex);
           setTimeRemaining(testStages[startIndex].duration);
+        } else {
+          setCurrentStageIndex(0);
+          setTimeRemaining(0);
         }
 
         sessionStorage.setItem("testName", "Practice Test");

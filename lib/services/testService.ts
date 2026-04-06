@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { z } from "zod";
 
 import dbConnect from "@/lib/mongodb";
@@ -7,11 +8,14 @@ import redis from "@/lib/redis";
 import { TestValidationSchema, type TestInput } from "@/lib/schema/test";
 
 type SortableTestField = "createdAt" | "title";
-
-const CACHE_TTL_SECONDS = 3600;
+const TESTS_CACHE_TTL_SECONDS = 120;
 
 function getTestsCacheKey(page: number, limit: number, sortBy: SortableTestField, sortOrder: "asc" | "desc") {
   return `tests:page:${page}:limit:${limit}:sortBy:${sortBy}:sortOrder:${sortOrder}`;
+}
+
+function getTestCacheKey(testId: string) {
+  return `test:${testId}`;
 }
 
 async function deleteCacheKeys(keys: Array<string | null | undefined>) {
@@ -30,6 +34,49 @@ async function deleteCacheKeysByPattern(pattern: string) {
   }
 }
 
+async function getQuestionCountsForTests(testIds: Types.ObjectId[]) {
+  const questionCountsData = await Question.aggregate([
+    { $match: { testId: { $in: testIds } } },
+    {
+      $group: {
+        _id: { testId: "$testId", section: "$section", module: "$module" },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return questionCountsData;
+}
+
+function attachQuestionCounts<T extends { _id: Types.ObjectId }>(
+  tests: T[],
+  questionCountsData: Array<{
+    _id: { testId: Types.ObjectId; section: string; module: number };
+    count: number;
+  }>
+) {
+  return tests.map((test) => {
+    const counts = { rw_1: 0, rw_2: 0, math_1: 0, math_2: 0 };
+
+    questionCountsData.forEach((questionCount) => {
+      if (questionCount._id.testId.toString() === test._id.toString()) {
+        const sectionPrefix = questionCount._id.section === "Reading and Writing" ? "rw" : "math";
+        const key = `${sectionPrefix}_${questionCount._id.module}` as keyof typeof counts;
+        counts[key] = questionCount.count;
+      }
+    });
+
+    return { ...test, questionCounts: counts };
+  });
+}
+
+async function invalidateTestCaches(testId?: string) {
+  await Promise.all([
+    deleteCacheKeys([testId ? getTestCacheKey(testId) : null]),
+    deleteCacheKeysByPattern("tests:*"),
+  ]);
+}
+
 export const testService = {
   async getTests(page: number, limit: number, sortBy: string, sortOrder: string) {
     const normalizedSortBy: SortableTestField = sortBy === "title" ? "title" : "createdAt";
@@ -38,7 +85,13 @@ export const testService = {
     const cachedTests = await redis.get(cacheKey);
 
     if (cachedTests) {
-      return JSON.parse(cachedTests);
+      const ttl = await redis.ttl(cacheKey);
+
+      if (ttl > 0) {
+        return JSON.parse(cachedTests);
+      }
+
+      await redis.del(cacheKey);
     }
 
     await dbConnect();
@@ -52,31 +105,8 @@ export const testService = {
 
     const totalTests = await Test.countDocuments({});
     const tests = await Test.find({}).sort(sortObj).skip(skip).limit(limit).lean();
-
-    const testIds = tests.map((test) => test._id);
-    const questionCountsData = await Question.aggregate([
-      { $match: { testId: { $in: testIds } } },
-      {
-        $group: {
-          _id: { testId: "$testId", section: "$section", module: "$module" },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const testsWithCounts = tests.map((test) => {
-      const counts = { rw_1: 0, rw_2: 0, math_1: 0, math_2: 0 };
-
-      questionCountsData.forEach((questionCount) => {
-        if (questionCount._id.testId.toString() === test._id.toString()) {
-          const sectionPrefix = questionCount._id.section === "Reading and Writing" ? "rw" : "math";
-          const key = `${sectionPrefix}_${questionCount._id.module}` as keyof typeof counts;
-          counts[key] = questionCount.count;
-        }
-      });
-
-      return { ...test, questionCounts: counts };
-    });
+    const questionCountsData = await getQuestionCountsForTests(tests.map((test) => test._id as Types.ObjectId));
+    const testsWithCounts = attachQuestionCounts(tests, questionCountsData);
 
     const result = {
       tests: testsWithCounts,
@@ -88,9 +118,38 @@ export const testService = {
       },
     };
 
-    await redis.set(cacheKey, JSON.stringify(result), "EX", CACHE_TTL_SECONDS);
+    await redis.set(cacheKey, JSON.stringify(result), "EX", TESTS_CACHE_TTL_SECONDS);
 
     return result;
+  },
+
+  async getTestById(testId: string) {
+    const cacheKey = getTestCacheKey(testId);
+    const cachedTest = await redis.get(cacheKey);
+
+    if (cachedTest) {
+      const ttl = await redis.ttl(cacheKey);
+
+      if (ttl > 0) {
+        return JSON.parse(cachedTest);
+      }
+
+      await redis.del(cacheKey);
+    }
+
+    await dbConnect();
+
+    const test = await Test.findById(testId).lean();
+    if (!test) {
+      throw new Error("Test not found");
+    }
+
+    const questionCountsData = await getQuestionCountsForTests([test._id as Types.ObjectId]);
+    const [testWithCounts] = attachQuestionCounts([test], questionCountsData);
+
+    await redis.set(cacheKey, JSON.stringify(testWithCounts), "EX", TESTS_CACHE_TTL_SECONDS);
+
+    return testWithCounts;
   },
 
   async createTest(data: unknown) {
@@ -99,10 +158,7 @@ export const testService = {
       await dbConnect();
       const newTest = await Test.create(validatedData);
 
-      await Promise.all([
-        deleteCacheKeys([`test:${newTest._id.toString()}`]),
-        deleteCacheKeysByPattern("tests:*"),
-      ]);
+      await invalidateTestCaches(newTest._id.toString());
 
       return newTest;
     } catch (error: unknown) {
