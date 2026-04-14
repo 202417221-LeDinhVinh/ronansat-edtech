@@ -30,7 +30,7 @@ jobs:
       EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
-      NEXT_PUBLIC_DESMOS_API_KEY: ${{ secrets.NEXT_PUBLIC_DESMOS_API_KEY }}
+      NEXT_PUBLIC_DESMOS_URL: ${{ secrets.NEXT_PUBLIC_DESMOS_URL }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
       CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
     steps:
