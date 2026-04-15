@@ -124,7 +124,9 @@ const COLUMN_LIMITS: Record<string, number> = {
   [MATH_SECTION]: 18,
 };
 
-const TALL_MATH_PATTERN = /\\frac|\^(?:\{[^}]+\}|\S)/;
+const FRACTION_PATTERN = /\\frac/;
+const SUPERSCRIPT_PATTERN = /\^(\{[^}]+\}|\\[a-zA-Z]+|\S)/g;
+const NON_TALL_SUPERSCRIPT_PATTERN = /^(?:\{)?(?:\\circ|\\degree|\\deg|°)(?:\})?$/;
 
 function groupConsecutiveDisplayMathBlocks(html: string): string {
   return html.replace(
@@ -138,7 +140,32 @@ function hasTallMath(text: string | null | undefined): boolean {
     return false;
   }
 
-  return TALL_MATH_PATTERN.test(text);
+  if (FRACTION_PATTERN.test(text)) {
+    return true;
+  }
+
+  for (const match of text.matchAll(SUPERSCRIPT_PATTERN)) {
+    const exponent = match[1]?.trim();
+    if (exponent && !NON_TALL_SUPERSCRIPT_PATTERN.test(exponent)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function stripDisplayMath(text: string): string {
+  return text
+    .replace(/\$\$[\s\S]*?\$\$/g, " ")
+    .replace(/^\s*\$(?!\$)(.+?)\$(?!\$)\s*$/gm, " ");
+}
+
+function hasTallInlineMathContent(text: string | null | undefined): boolean {
+  if (!text) {
+    return false;
+  }
+
+  return hasTallMath(stripDisplayMath(text));
 }
 
 function loosenTallInlineMathText(mathText: string): string {
@@ -429,6 +456,7 @@ function estimateQuestionUnits(
   section: string,
 ): number {
   const choices = normalizeChoices(item.question);
+  const hasTallChoice = choices.some((choice) => hasTallMath(choice));
   const hasImage = Boolean(resolveImageUrl(item.question.imageUrl));
   const baseUnits = section === MATH_SECTION ? 7 : 8;
 
@@ -446,6 +474,7 @@ function estimateQuestionUnits(
     item.question.questionType === "spr"
       ? 3
       : Math.max(3, Math.ceil(choices.join(" ").length / 120));
+  units += hasTallChoice ? choices.length + 1 : 0;
   units += hasImage ? 8 : 0;
 
   return units;
@@ -491,6 +520,12 @@ function getAnswerKeyValue(question: RawQuestion): string {
   return correctAnswer || "-";
 }
 
+function getAnswerKeySectionTitle(stage: ActiveStage): string {
+  const sectionLabel = isVerbalSection(stage.section) ? "Verbal" : stage.sectionTitle;
+
+  return `${sectionLabel} Module ${stage.module}`;
+}
+
 function buildAnswerKeySection(stage: ActiveStage): string {
   const entries = stage.questions
     .map(
@@ -505,7 +540,10 @@ function buildAnswerKeySection(stage: ActiveStage): string {
 
   return `
     <section class="answer-key-section">
-      <h2 class="answer-key-section-title">${escapeHtml(`${stage.sectionTitle} Module ${stage.module}`)}</h2>
+      <h2 class="answer-key-section-title">
+        <img src="/brand/logo.svg" alt="" aria-hidden="true" class="answer-key-section-logo" />
+        <span>${escapeHtml(getAnswerKeySectionTitle(stage))}</span>
+      </h2>
       <div class="answer-key-entry-grid">${entries}</div>
     </section>
   `;
@@ -632,9 +670,10 @@ function buildPageFooter(pageNumber: number, continueLabel?: string): string {
 function buildQuestionCard(item: QuestionRenderItem): string {
   const imageUrl = resolveImageUrl(item.question.imageUrl);
   const choices = normalizeChoices(item.question);
+  const choiceListHasTallMath = choices.some((choice) => hasTallMath(choice));
   const labels = ["A", "B", "C", "D", "E", "F"];
-  const passageHasTallMath = hasTallMath(item.question.passage);
-  const promptHasTallMath = hasTallMath(item.question.questionText);
+  const passageHasTallMath = hasTallInlineMathContent(item.question.passage);
+  const promptHasTallMath = hasTallInlineMathContent(item.question.questionText);
 
   const passageHtml = item.showPassage
     ? `
@@ -659,15 +698,13 @@ function buildQuestionCard(item: QuestionRenderItem): string {
     item.question.questionType === "spr"
       ? `<div class="spr-answer-line"></div>`
       : `
-          <ol class="answer-choice-list">
+          <ol class="answer-choice-list${choiceListHasTallMath ? " answer-choice-list--tall-math" : ""}">
             ${choices
               .map((choice, index) => {
-                const choiceHasTallMath = hasTallMath(choice);
-
                 return `
-                  <li class="${choiceHasTallMath ? "answer-choice-item--tall-math" : ""}">
-                    <span class="answer-choice-label${choiceHasTallMath ? " answer-choice-label--tall-math" : ""}">${labels[index]})</span>
-                    <div class="answer-choice-text${choiceHasTallMath ? " answer-choice-text--tall-math" : ""}">${parseText(choice, { loosenTallInlineMath: true })}</div>
+                  <li class="${choiceListHasTallMath ? "answer-choice-item--tall-math" : ""}">
+                    <span class="answer-choice-label${choiceListHasTallMath ? " answer-choice-label--tall-math" : ""}">${labels[index]})</span>
+                    <div class="answer-choice-text${choiceListHasTallMath ? " answer-choice-text--tall-math" : ""}">${parseText(choice, { loosenTallInlineMath: true })}</div>
                   </li>
                 `;
               })
@@ -1713,6 +1750,10 @@ function buildStyles(): string {
       margin: 0;
     }
 
+    .answer-choice-list--tall-math {
+      margin-top: 0.02in;
+    }
+
     .answer-choice-list li {
       display: flex;
       align-items: baseline;
@@ -1721,7 +1762,8 @@ function buildStyles(): string {
     }
 
     .answer-choice-item--tall-math {
-      margin-bottom: 0.19in;
+      align-items: flex-start;
+      margin-bottom: 0.31in;
     }
 
     .answer-choice-label {
@@ -1742,7 +1784,9 @@ function buildStyles(): string {
     }
 
     .answer-choice-text--tall-math {
-      line-height: 2.05;
+      line-height: 2.6;
+      padding-top: 0.025in;
+      padding-bottom: 0.025in;
     }
 
     .spr-answer-line {
@@ -1881,11 +1925,21 @@ function buildStyles(): string {
     }
 
     .answer-key-section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.08in;
       margin: 0 0 0.12in;
       font-size: 0.21in;
       font-weight: 700;
       line-height: 1.15;
       color: #424242;
+    }
+
+    .answer-key-section-logo {
+      width: 0.22in;
+      height: 0.22in;
+      flex: 0 0 auto;
+      object-fit: contain;
     }
 
     .answer-key-entry-grid {
@@ -1984,11 +2038,20 @@ function buildStyles(): string {
       line-height: 1.95;
     }
 
+    .answer-choice-text--tall-math .katex {
+      line-height: 2.28;
+    }
+
     .question-text--tall-math .katex .base,
     .passage-body--tall-math .katex .base,
     .answer-choice-text--tall-math .katex .base {
       padding-top: 0.26em;
       padding-bottom: 0.36em;
+    }
+
+    .answer-choice-text--tall-math .katex .base {
+      padding-top: 0.4em;
+      padding-bottom: 0.54em;
     }
 
     .question-text .katex .mord,
