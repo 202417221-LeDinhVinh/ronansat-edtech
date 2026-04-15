@@ -6,6 +6,7 @@ import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from "recharts";
 
 import { getDisplayScore, getResultDateValue } from "@/components/dashboard/dashboardResultUtils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UserResultSummary } from "@/types/testLibrary";
 
 type ImprovementTrendPanelProps = {
@@ -20,6 +21,11 @@ type ChartPoint = {
   fullLabel: string;
   score: number | null;
 };
+
+const RANGE_OPTIONS: Array<{ value: RangeOption; label: string }> = [
+  { value: 15, label: "15 Days" },
+  { value: 30, label: "Month" },
+];
 
 const chartConfig = {
   score: {
@@ -45,24 +51,19 @@ export default function ImprovementTrendPanel({ results }: ImprovementTrendPanel
               Daily best score trend from your recent practice history, themed from the shadcn chart base into the workbook system.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 md:justify-end">
-            {[15, 30].map((option) => {
-              const isActive = range === option;
-
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setRange(option as RangeOption)}
-                  className={[
-                    "min-w-[8rem] rounded-2xl border-2 border-ink-fg px-5 py-3 text-center text-xs font-black uppercase tracking-[0.16em] workbook-press brutal-shadow-sm",
-                    isActive ? "bg-primary text-ink-fg" : "bg-paper-bg text-ink-fg/75 hover:bg-surface-white",
-                  ].join(" ")}
-                >
-                  {option === 15 ? "15 Days" : "Month"}
-                </button>
-              );
-            })}
+          <div className="w-full md:w-auto md:min-w-[11rem]">
+            <Select value={String(range)} onValueChange={(value) => setRange(Number(value) as RangeOption)}>
+              <SelectTrigger aria-label="Select date range" className="h-14 min-w-[11rem] bg-paper-bg text-xs font-black uppercase tracking-[0.16em] md:ml-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RANGE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={String(option.value)}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
