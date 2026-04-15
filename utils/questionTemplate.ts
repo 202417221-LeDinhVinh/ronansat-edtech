@@ -122,20 +122,59 @@ const COLUMN_LIMITS: Record<string, number> = {
   [MATH_SECTION]: 18,
 };
 
-function parseText(text: string | null | undefined): string {
+const TALL_MATH_PATTERN = /\\frac|\^(?:\{[^}]+\}|\S)/;
+
+function groupConsecutiveDisplayMathBlocks(html: string): string {
+  return html.replace(
+    /(?:<div class="display-math-block">[\s\S]*?<\/div>\s*){2,}/g,
+    (groupHtml) => `<div class="display-math-group">${groupHtml.trim()}</div>`,
+  );
+}
+
+function hasTallMath(text: string | null | undefined): boolean {
+  if (!text) {
+    return false;
+  }
+
+  return TALL_MATH_PATTERN.test(text);
+}
+
+function parseText(
+  text: string | null | undefined,
+  options?: {
+    promoteStandaloneMath?: boolean;
+    loosenTallInlineMath?: boolean;
+  },
+): string {
   if (!text) {
     return "";
   }
 
-  const parsedMath = text.replace(
+  const normalizedText = options?.promoteStandaloneMath
+    ? text.replace(/^\s*\$(?!\$)(.+?)\$(?!\$)\s*$/gm, (_, mathText: string) => {
+        return `$$${mathText.trim()}$$`;
+      })
+    : text;
+
+  const parsedMath = normalizedText.replace(
     /(\$\$?)(.*?)\1/gs,
     (match, prefix, mathText) => {
       try {
-        return katex.renderToString(mathText.trim(), {
-          displayMode: prefix === "$$",
+        const isDisplayMath = prefix === "$$";
+        const normalizedMathText = mathText.trim();
+        const renderMathText =
+          !isDisplayMath && options?.loosenTallInlineMath && hasTallMath(normalizedMathText)
+            ? `\\displaystyle ${normalizedMathText}`
+            : normalizedMathText;
+        const renderedMath = katex.renderToString(renderMathText, {
+          displayMode: isDisplayMath,
           throwOnError: false,
           output: "html",
         });
+
+        return isDisplayMath
+          ? `\n<div class="display-math-block">${renderedMath}</div>\n`
+          : renderedMath;
       } catch {
         return match;
       }
@@ -144,9 +183,20 @@ function parseText(text: string | null | undefined): string {
 
   const parsedHtml = marked.parse(parsedMath) as string;
 
-  return parsedHtml.replace(
-    /<p>\s*(<span class="katex-display">[\s\S]*?<\/span>)\s*<\/p>/g,
-    '<div class="display-math-block">$1</div>',
+  if (!options?.promoteStandaloneMath) {
+    return parsedHtml;
+  }
+
+  return groupConsecutiveDisplayMathBlocks(
+    parsedHtml
+    .replace(
+      /<p>\s*(<span class="katex-display">[\s\S]*?<\/span>)\s*<\/p>/g,
+      '<div class="display-math-block">$1</div>',
+    )
+    .replace(
+      /<p>\s*(<span class="katex">[\s\S]*?<\/span>)\s*<\/p>/g,
+      '<div class="display-math-block"><span class="katex-display">$1</span></div>',
+    ),
   );
 }
 
@@ -577,10 +627,13 @@ function buildQuestionCard(item: QuestionRenderItem): string {
   const imageUrl = resolveImageUrl(item.question.imageUrl);
   const choices = normalizeChoices(item.question);
   const labels = ["A", "B", "C", "D", "E", "F"];
+  const passageHasTallMath = hasTallMath(item.question.passage);
+  const promptHasTallMath = hasTallMath(item.question.questionText);
+  const choicesHaveTallMath = choices.some((choice) => hasTallMath(choice));
 
   const passageHtml = item.showPassage
     ? `
-        <div class="passage-body">${parseText(item.question.passage)}</div>
+        <div class="passage-body${passageHasTallMath ? " passage-body--tall-math" : ""}">${parseText(item.question.passage, { promoteStandaloneMath: true, loosenTallInlineMath: true })}</div>
       `
     : item.passageReference
       ? `<div class="passage-reference">${escapeHtml(item.passageReference)}</div>`
@@ -595,19 +648,19 @@ function buildQuestionCard(item: QuestionRenderItem): string {
     : "";
 
   const promptHtml = item.question.questionText
-    ? `<div class="question-text">${parseText(item.question.questionText)}</div>`
+    ? `<div class="question-text${promptHasTallMath ? " question-text--tall-math" : ""}">${parseText(item.question.questionText, { promoteStandaloneMath: true, loosenTallInlineMath: true })}</div>`
     : "";
   const answerHtml =
     item.question.questionType === "spr"
       ? `<div class="spr-answer-line"></div>`
       : `
-          <ol class="answer-choice-list">
+          <ol class="answer-choice-list${choicesHaveTallMath ? " answer-choice-list--tall-math" : ""}">
             ${choices
               .map(
                 (choice, index) => `
                   <li>
                     <span class="answer-choice-label">${labels[index]})</span>
-                    <div class="answer-choice-text">${parseText(choice)}</div>
+                    <div class="answer-choice-text${choicesHaveTallMath ? " answer-choice-text--tall-math" : ""}">${parseText(choice, { loosenTallInlineMath: true })}</div>
                   </li>
                 `,
               )
@@ -1457,18 +1510,24 @@ function buildStyles(): string {
       min-width: 0.3in;
       height: 0.2in;
       padding: 0;
-      font-family: Arial, Helvetica, sans-serif;
+      background: #111111;
+      color: #ffffff;
       font-weight: 700;
-      font-size: 0.135in;
       line-height: 1;
       letter-spacing: 0;
       transform: translateY(calc(-50%));
     }
 
-    .question-bar-number-text {
-      display: block;
+    .question-bar > span > .question-bar-number-text {
+      display: inline-block;
       position: relative;
-      top: 0.006in;
+      top: 0.003in;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 0.15in;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: #ffffff;
+      line-height: 1;
     }
 
     .question-card-body {
@@ -1486,12 +1545,42 @@ function buildStyles(): string {
     }
 
     .display-math-block {
-      margin: 0.12in 0 0.16in;
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      margin: 0.1in 0 0.14in;
+      padding: 0.02in 0;
     }
 
     .display-math-block:last-child {
       margin-bottom: 0.04in;
+    }
+
+    .display-math-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.035in;
+      width: 100%;
+      margin: 0.1in 0 0.14in;
+    }
+
+    .display-math-group:last-child {
+      margin-bottom: 0.04in;
+    }
+
+    .display-math-group > .display-math-block {
+      margin: 0;
+      padding: 0.02in 0;
+    }
+
+    .display-math-block > .katex-display {
+      margin: 0;
+      text-align: center;
+    }
+
+    .display-math-block > .katex-display > .katex {
+      display: inline-block;
+      text-align: left;
     }
 
     .passage-kicker,
@@ -1511,8 +1600,16 @@ function buildStyles(): string {
       margin-bottom: 0.08in;
     }
 
+    .passage-body--tall-math {
+      line-height: 1.9;
+    }
+
     .question-text {
       margin-bottom: 0.08in;
+    }
+
+    .question-text--tall-math {
+      line-height: 1.9;
     }
 
     .question-image-wrap {
@@ -1540,8 +1637,16 @@ function buildStyles(): string {
       margin-bottom: 0.07in;
     }
 
+    .answer-choice-list--tall-math li {
+      margin-bottom: 0.19in;
+    }
+
     .answer-choice-label {
       min-width: 0.22in;
+    }
+
+    .answer-choice-text--tall-math {
+      line-height: 1.82;
     }
 
     .spr-answer-line {
@@ -1775,6 +1880,19 @@ function buildStyles(): string {
     .passage-body .katex,
     .answer-choice-text .katex {
       vertical-align: baseline;
+    }
+
+    .question-text--tall-math .katex,
+    .passage-body--tall-math .katex,
+    .answer-choice-text--tall-math .katex {
+      line-height: 1.68;
+    }
+
+    .question-text--tall-math .katex .base,
+    .passage-body--tall-math .katex .base,
+    .answer-choice-text--tall-math .katex .base {
+      padding-top: 0.16em;
+      padding-bottom: 0.24em;
     }
 
     .question-text .katex .mord,

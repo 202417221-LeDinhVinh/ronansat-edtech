@@ -232,6 +232,7 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - The PDF template now links KaTeX CSS, uses bundled Minion Pro through `@font-face`, and preserves a two-column booklet-style layout with official-style section sequencing.
 - A durable implementation note for this work now lives in `memory/pdf-export-official-digital-booklet.md` and should be read before continuing PDF fidelity work.
 - The current unresolved visual issue is exact top-banner scaling/alignment: future work should debug `buildTopBand()` together with the active `.top-band` CSS instead of reverting to inline base64 banners or local filesystem asset paths.
+- Full-line math equation centering in the PDF template now works by promoting standalone math in both `questionText` and `passage`, then centering the resulting `.display-math-block`; this must not be applied to answer choices.
 
 ### 2026-04-14 PDF Booklet Styling
 

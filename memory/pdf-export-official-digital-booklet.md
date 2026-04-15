@@ -49,6 +49,14 @@
 - Earlier attempts failed because old CSS for `.top-band` still constrained the strip with side margins and conflicting rendering rules.
 - Another failed direction was using inline base64 SVG banners. That made the template harder to maintain and was intentionally abandoned.
 - The repository direction is now to reference the real SVG files from `public/pdf-assets/banners`.
+- A math display-centering bug looked like a `questionText` parsing problem at first, but the actual SAT-style leading equation for some math items is stored in the `passage` field. The verified Mongo example was question `_id=69d7618fd8c210ff2a8dea1a`, where `passage` contained `$h(x) = \frac{1}{2}(x)(89)$` and `questionText` only contained the prose prompt.
+- The durable fix is in `parseText()` plus the `buildQuestionCard()` call sites in `utils/questionTemplate.ts`: enable standalone-math promotion for both `questionText` and `passage`, but not for answer choices.
+- When this regresses, inspect generated HTML first. The correct output pattern is `<div class="passage-body"><div class="display-math-block">...` or the equivalent inside `.question-text`, not a bare left-flowing `<p><span class="katex">...`.
+- The final centering fix was layout-level as well as parser-level: `.display-math-block` must span the full content width and center its KaTeX child; only wrapping the math without width/justification was not sufficient in the printable iframe.
+- Consecutive full-line equations should render as a visual group. The template now wraps adjacent `.display-math-block` runs in `.display-math-group` so the prompt gets normal outer spacing before the first equation and after the last one, with only a small gap between equations inside the group.
+- Inline math with tall structures should opt into extra leading. The template now detects fractions and exponents from the raw source (`\frac` and `^`) and adds taller line-height classes to the affected prompt/passage block.
+- Answer choices use a stricter rule: if any choice in the set contains a tall-math pattern, the entire answer list gets the taller spacing treatment so the options stay visually aligned with each other.
+- CSS spacing alone was not enough for cramped fractions. The PDF renderer now also prepends `\displaystyle` to tall inline math before KaTeX renders it, which avoids the smaller `mtight` inline-fraction form and materially improves legibility in prompts and answer choices.
 - If the banner width looks wrong again, inspect both:
   - `buildTopBand()` markup in `utils/questionTemplate.ts`
   - the active `.top-band` and `.top-band-image` CSS in the generated template
