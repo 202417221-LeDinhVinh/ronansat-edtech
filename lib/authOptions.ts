@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 
+import { loadAppEnv } from "@/lib/env/loadAppEnv";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -10,11 +11,20 @@ import { isValidEmail, normalizeEmail } from "@/lib/security";
 import { hasCompletedStudentProfile } from "@/lib/userProfile";
 import type { Role } from "@/lib/permissions";
 
+loadAppEnv();
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+
+if (!googleClientId || !googleClientSecret) {
+  throw new Error("Google OAuth environment variables are missing.");
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
     }),
     CredentialsProvider({
       name: "Credentials",

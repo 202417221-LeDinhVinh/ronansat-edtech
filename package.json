@@ -4,16 +4,16 @@
   "private": true,
   "packageManager": "bun@1.3.11",
   "scripts": {
-    "dev": "tsx scripts/dev.ts",
+    "dev": "dotenvx run -f .env.local -f .env.development --ignore=MISSING_ENV_FILE -- tsx scripts/dev.ts",
     "dev:secure": "bun run dev",
-    "db": "tsx scripts/db.ts",
-    "build": "tsx scripts/next.ts build",
+    "db": "dotenvx run -f .env.local -f .env.development --ignore=MISSING_ENV_FILE -- tsx scripts/db.ts",
+    "build": "dotenvx run -f .env.production --ignore=MISSING_ENV_FILE -- next build",
     "build:secure": "bun run build",
-    "build:next": "tsx scripts/next.ts build",
-    "start": "tsx scripts/next.ts start",
+    "build:next": "next build",
+    "start": "dotenvx run -f .env.production --ignore=MISSING_ENV_FILE -- next start",
     "start:secure": "bun run start",
     "lint": "eslint --no-error-on-unmatched-pattern --no-warn-ignored app components hooks lib types utils *.ts *.tsx *.js *.mjs",
-    "seed": "tsx seed.ts",
+    "seed": "dotenvx run -f .env.local -f .env.development --ignore=MISSING_ENV_FILE -- tsx seed.ts",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "dependencies": {

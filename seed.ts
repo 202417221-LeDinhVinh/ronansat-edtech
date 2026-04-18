@@ -1,9 +1,6 @@
 import mongoose from "mongoose";
 import Test from "./lib/models/Test";
 import Question from "./lib/models/Question";
-import { loadAppEnv } from "./lib/env/loadAppEnv";
-
-loadAppEnv("development");
 
 const MONGODB_URI = process.env.MONGODB_URI;
 

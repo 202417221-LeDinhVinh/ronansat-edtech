@@ -2,12 +2,9 @@ import { spawn } from "node:child_process";
 import process from "node:process";
 import { Collection, Document, MongoClient } from "mongodb";
 
-import { loadAppEnv } from "@/lib/env/loadAppEnv";
-
-loadAppEnv("development");
-
 const DEFAULT_LOCAL_MONGODB_URI = "mongodb://127.0.0.1:27017/ronansat-local";
 const FETCH_FLAG = "--fetch";
+const STOP_FLAG = "--stop";
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 const WAIT_TIMEOUT_MS = 15000;
 const POLL_INTERVAL_MS = 500;
@@ -15,6 +12,10 @@ const COPY_BATCH_SIZE = 500;
 
 function shouldFetchDb(argv: string[]) {
   return argv.includes(FETCH_FLAG);
+}
+
+function shouldStopDb(argv: string[]) {
+  return argv.includes(STOP_FLAG);
 }
 
 function getLocalMongoUri() {
@@ -194,6 +195,26 @@ async function startMongoService() {
   }
 }
 
+async function stopMongoService() {
+  switch (process.platform) {
+    case "darwin":
+      await runCommand("brew", ["services", "stop", "mongodb/brew/mongodb-community"]);
+      return;
+    case "win32":
+      await runCommand("powershell.exe", [
+        "-NoProfile",
+        "-Command",
+        "Stop-Service -Name MongoDB",
+      ]);
+      return;
+    case "linux":
+      await runCommand("systemctl", ["--user", "stop", "mongod"]);
+      return;
+    default:
+      throw new Error(`Unsupported platform: ${process.platform}`);
+  }
+}
+
 async function waitForMongo(localUri: string) {
   const deadline = Date.now() + WAIT_TIMEOUT_MS;
 
@@ -209,11 +230,20 @@ async function waitForMongo(localUri: string) {
 }
 
 async function main() {
-  const fetchDb = shouldFetchDb(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  const fetchDb = shouldFetchDb(args);
+  const stopDb = shouldStopDb(args);
   const localUri = getLocalMongoUri();
   const localMeta = parseMongoUri(localUri);
 
   assertLocalTarget(localUri);
+
+  if (stopDb) {
+    console.log(`Stopping local MongoDB at ${localMeta.host}/${localMeta.databaseName}...`);
+    await stopMongoService();
+    console.log("Local MongoDB stop command completed.");
+    return;
+  }
 
   if (await canConnect(localUri)) {
     console.log(`Local MongoDB is already running at ${localMeta.host}/${localMeta.databaseName}.`);

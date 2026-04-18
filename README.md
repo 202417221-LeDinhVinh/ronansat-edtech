@@ -122,6 +122,7 @@ Then run:
 
 ```bash
 bun run db
+bun run db -- --stop
 bun run dev
 ```
 
@@ -134,6 +135,7 @@ http://localhost:3000
 Important notes:
 
 - `bun run db` starts the local MongoDB service for the `LOCAL_MONGODB_URI` target when the service is installed but not already running
+- `bun run db -- --stop` stops the local MongoDB service for the `LOCAL_MONGODB_URI` target
 - if the local database is empty on first run, `bun run db` automatically copies the current remote MongoDB data into it
 - `bun run db -- --fetch` forces a fresh copy into the local database before you run the app
 - MongoDB is required; `bun run dev` rewrites `MONGODB_URI` to `LOCAL_MONGODB_URI` before startup so the app uses a local database by default
@@ -155,6 +157,7 @@ Run the app in development with the encrypted shared env loaded through `dotenvx
 
 ```bash
 bun run db
+bun run db -- --stop
 bun run dev
 ```
 
@@ -182,7 +185,7 @@ To update the shared encrypted development env:
 
 You can distribute the encrypted `.env.development` through git, and distribute the matching `.env.keys` to trusted developers through a separate secure channel.
 
-`bun run db`, `bun run dev`, `bun run build`, `bun run start`, the production server runtime, and the seed script now all load env through the same shared `dotenvx` decryption flow. Development uses `.env.development` plus optional `.env.local` overrides, while production uses `.env.production`. `bun run db` uses `REMOTE_MONGODB_URI` or the shared `MONGODB_URI` as the fetch source when a first-run bootstrap or `--fetch` is needed, and `bun run dev` points the app itself at `LOCAL_MONGODB_URI`.
+`bun run db`, `bun run dev`, `bun run build`, `bun run start`, and `bun run seed` all load env through `dotenvx`. Development commands use `.env.development` plus optional `.env.local` overrides, while production build and start use `.env.production`. The deployed production server runtime decrypts `.env.production` on startup with `DOTENV_PRIVATE_KEY_PRODUCTION`. `bun run db` uses `REMOTE_MONGODB_URI` or the shared `MONGODB_URI` as the fetch source when a first-run bootstrap or `--fetch` is needed, and `bun run dev` points the app itself at `LOCAL_MONGODB_URI`.
 
 Environment variables used by the codebase:
 
