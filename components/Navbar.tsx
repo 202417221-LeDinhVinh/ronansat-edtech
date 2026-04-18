@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import BrandLogo from "@/components/BrandLogo";
+import { clearClientSessionState } from "@/lib/clearClientSessionState";
 
 type NavItemConfig = {
   href: string;
@@ -200,6 +201,11 @@ export default function Navbar() {
   const navItems = isAdmin ? ADMIN_ITEMS : isParent ? PARENT_ITEMS : STUDENT_ITEMS;
   const displayName = session?.user.name || session?.user.email?.split("@")[0] || "Scholar";
 
+  const handleSignOut = async () => {
+    clearClientSessionState();
+    await signOut({ callbackUrl: "/auth" });
+  };
+
   if (!isReady || isHiddenRoute) {
     return null;
   }
@@ -234,7 +240,7 @@ export default function Navbar() {
             <p className="mt-1 truncate text-[0.82rem] text-ink-fg">{session.user.email}</p>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/auth" })}
+            onClick={() => void handleSignOut()}
             className="workbook-button mt-3 w-full justify-center bg-accent-3 text-white"
             type="button"
           >
@@ -251,7 +257,7 @@ export default function Navbar() {
               <NavItem key={item.href} item={item} pathname={pathname} compact />
             ))}
             <button
-              onClick={() => signOut({ callbackUrl: "/auth" })}
+              onClick={() => void handleSignOut()}
               className="flex min-w-[4.75rem] flex-col items-center justify-center gap-1 rounded-2xl border-2 border-ink-fg bg-surface-white px-2 py-2.5 text-center brutal-shadow-sm workbook-press sm:min-w-[5.75rem] sm:px-3 sm:py-3"
               type="button"
             >

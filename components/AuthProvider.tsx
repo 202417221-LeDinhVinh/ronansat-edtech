@@ -1,14 +1,50 @@
-// File bao phủ toàn bộ web -> Giúp mọi nơi biết thông tin user đang đăng nhập mà k cần hỏi server nhiều lần
+"use client";
 
-"use client";  // Kiểm tra phiên đăng nhập ở phía user
+import { useEffect, useRef } from "react";
+import type { Session } from "next-auth";
+import { SessionProvider, useSession } from "next-auth/react";
 
-import { SessionProvider } from "next-auth/react";    // Quản lý login -> Giúp mình log in ngay cả khi ấn F5
+import { clearClientSessionState } from "@/lib/clearClientSessionState";
+
+function SessionStateBoundary() {
+  const { data: session, status } = useSession();
+  const lastUserIdRef = useRef<string | null>(null);
+  const hasHydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (status === "loading") {
+      return;
+    }
+
+    const currentUserId = status === "authenticated" ? session?.user?.id ?? null : null;
+
+    if (!hasHydratedRef.current) {
+      hasHydratedRef.current = true;
+      lastUserIdRef.current = currentUserId;
+      return;
+    }
+
+    if (lastUserIdRef.current && currentUserId !== lastUserIdRef.current) {
+      clearClientSessionState();
+    }
+
+    lastUserIdRef.current = currentUserId;
+  }, [session?.user?.id, status]);
+
+  return null;
+}
 
 export default function AuthProvider({
-    children,                                     // Toàn bộ nội dung bên trong ứng dụng
+  children,
+  session,
 }: {
-    children: React.ReactNode;
-}) {  
-    return <SessionProvider>{children}</SessionProvider>;       // Bọc vào trong SessionProvide giúp mọi trang khác có khả năng truy cập vào thông tin đăng nhập
-                                                                // Nó như cầu giao tổng cho useSession(), k có nó useSession sẽ k access đc thông tin đăng nhập
+  children: React.ReactNode;
+  session?: Session | null;
+}) {
+  return (
+    <SessionProvider session={session}>
+      <SessionStateBoundary />
+      {children}
+    </SessionProvider>
+  );
 }

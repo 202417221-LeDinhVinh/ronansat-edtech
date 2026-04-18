@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
-import { hasCompletedStudentProfile } from "@/lib/userProfile";
+import { hasCompletedProfile } from "@/lib/userProfile";
 
 function isDevEnvironment() {
   return process.env.NODE_ENV !== "production";
@@ -34,12 +34,12 @@ export async function POST() {
   return NextResponse.json(
     {
       message: "Welcome onboarding reset.",
-      user: {
-        username: user.username,
-        birthDate: user.birthDate,
-        hasCompletedProfile: hasCompletedStudentProfile(user),
+        user: {
+          username: user.username,
+          birthDate: user.birthDate,
+          hasCompletedProfile: hasCompletedProfile(user),
+        },
       },
-    },
     { status: 200 }
   );
 }

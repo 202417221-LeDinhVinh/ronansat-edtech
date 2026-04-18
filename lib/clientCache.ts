@@ -55,3 +55,19 @@ export function deleteClientCache(key: string) {
     // Ignore storage delete failures and continue.
   }
 }
+
+export function clearClientCache() {
+  memoryCache.clear();
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    Object.keys(window.sessionStorage)
+      .filter((key) => key.startsWith("bluebook:"))
+      .forEach((key) => window.sessionStorage.removeItem(key));
+  } catch {
+    // Ignore storage cleanup failures and continue.
+  }
+}

@@ -7,6 +7,7 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import {
   USERNAME_REQUIREMENTS,
+  hasCompletedProfile,
   isValidBirthDate,
   isValidUsername,
   normalizeUsername,
@@ -17,9 +18,55 @@ const onboardingSchema = z.object({
   birthDate: z.string().trim(),
 });
 
+function getOnboardingErrorResponse(error: unknown) {
+  if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
+    return {
+      status: 409,
+      body: {
+        error: "That username is already taken.",
+      },
+    };
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "ValidationError" &&
+    "errors" in error &&
+    typeof error.errors === "object" &&
+    error.errors !== null
+  ) {
+    const details = Object.values(error.errors)
+      .map((issue) => (typeof issue === "object" && issue !== null && "message" in issue ? issue.message : ""))
+      .filter((message): message is string => typeof message === "string" && message.length > 0)
+      .join(" ");
+
+    return {
+      status: 400,
+      body: {
+        error: details || "Profile validation failed.",
+      },
+    };
+  }
+
+  const details = error instanceof Error && error.message ? error.message : "Unknown server error";
+
+  return {
+    status: 500,
+    body: {
+      error: "Failed to save your welcome profile.",
+      details,
+    },
+  };
+}
+
 export async function PUT(req: Request) {
+  let sessionUserId: string | undefined;
+
   try {
     const session = await getServerSession(authOptions);
+    sessionUserId = session?.user?.id;
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -71,17 +118,20 @@ export async function PUT(req: Request) {
         user: {
           username: user.username,
           birthDate: user.birthDate,
-          hasCompletedProfile: true,
+          hasCompletedProfile: hasCompletedProfile(user),
         },
       },
       { status: 200 }
     );
   } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
-      return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
-    }
+    const errorResponse = getOnboardingErrorResponse(error);
 
-    console.error("PUT /api/user/onboarding error:", error);
-    return NextResponse.json({ error: "Failed to save your welcome profile." }, { status: 500 });
+    console.error("PUT /api/user/onboarding error:", {
+      userId: sessionUserId,
+      error,
+      response: errorResponse,
+    });
+
+    return NextResponse.json(errorResponse.body, { status: errorResponse.status });
   }
 }

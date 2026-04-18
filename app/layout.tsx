@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import InitialTabBootOverlay from "@/components/InitialTabBootOverlay";
 import AppStartupPreloader from "@/components/AppStartupPreloader";
 import AuthProvider from "@/components/AuthProvider";
+import PostHogProvider from "@/components/PostHogProvider";
 import { WorkbookToaster } from "@/components/ui/WorkbookToaster";
 import { VocabBoardProvider } from "@/components/vocab/VocabBoardProvider";
 import { INITIAL_TAB_BOOT_PENDING_KEY, INITIAL_TAB_LOAD_SEEN_KEY } from "@/lib/initialTabLoad";
@@ -58,12 +59,14 @@ export default function RootLayout({
 }`}
         </Script>
         <AuthProvider>
-          <VocabBoardProvider>
-            <AppStartupPreloader />
-            <WorkbookToaster />
-            <AppShell>{children}</AppShell>
-            <InitialTabBootOverlay />
-          </VocabBoardProvider>
+          <PostHogProvider>
+            <VocabBoardProvider>
+              <AppStartupPreloader />
+              <WorkbookToaster />
+              <AppShell>{children}</AppShell>
+              <InitialTabBootOverlay />
+            </VocabBoardProvider>
+          </PostHogProvider>
         </AuthProvider>
       </body>
     </html>
