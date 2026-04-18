@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -191,6 +192,7 @@ const ADMIN_ITEMS: NavItemConfig[] = [
 ];
 
 export default function Navbar() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isReady = status !== "loading" && status !== "unauthenticated" && !!session;
@@ -200,6 +202,17 @@ export default function Navbar() {
   const homeHref = isParent ? "/parent/dashboard" : "/dashboard";
   const navItems = isAdmin ? ADMIN_ITEMS : isParent ? PARENT_ITEMS : STUDENT_ITEMS;
   const displayName = session?.user.name || session?.user.email?.split("@")[0] || "Scholar";
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    const routesToPrefetch = Array.from(new Set([homeHref, ...navItems.map((item) => item.href)]));
+    routesToPrefetch.forEach((href) => {
+      router.prefetch(href);
+    });
+  }, [homeHref, isReady, navItems, router]);
 
   const handleSignOut = async () => {
     clearClientSessionState();

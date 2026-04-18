@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
@@ -34,7 +34,7 @@ export function useReviewPageController() {
   const [expandedExplanations, setExpandedExplanations] = useState<Record<string, string>>({});
   const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cachedResults = getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY) ?? [];
     initialResultsCacheRef.current = cachedResults;
 
@@ -80,6 +80,8 @@ export function useReviewPageController() {
         initialResultsCacheRef.current = cachedResults;
         setResults(cachedResults);
         setLoading(false);
+        setRefreshing(false);
+        return;
       }
 
       if (initialResultsCacheRef.current.length > 0) {

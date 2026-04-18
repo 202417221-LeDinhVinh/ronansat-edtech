@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -30,8 +30,30 @@ export default function DashboardPageClient() {
   const [userResults, setUserResults] = useState<UserResultSummary[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasHydratedClientCache, setHasHydratedClientCache] = useState(false);
+
+  useLayoutEffect(() => {
+    const cachedStats = getClientCache<UserStatsSummary>(CACHE_STATS) ?? getClientCache<UserStatsSummary>(API_CACHE_STATS);
+    const cachedResults =
+      getClientCache<UserResultSummary[]>(CACHE_RESULTS) ?? getClientCache<UserResultSummary[]>(API_CACHE_RESULTS);
+    const cachedLeaderboard =
+      getClientCache<LeaderboardEntry[]>(CACHE_LEADERBOARD) ?? getClientCache<LeaderboardEntry[]>(API_CACHE_LEADERBOARD);
+
+    if (cachedStats !== undefined && cachedResults !== undefined && cachedLeaderboard !== undefined) {
+      setUserStats(cachedStats);
+      setUserResults(cachedResults);
+      setLeaderboard(cachedLeaderboard);
+      setLoading(false);
+    }
+
+    setHasHydratedClientCache(true);
+  }, []);
 
   useEffect(() => {
+    if (!hasHydratedClientCache) {
+      return;
+    }
+
     if (status === "unauthenticated") {
       router.replace("/auth");
       return;
@@ -54,7 +76,22 @@ export default function DashboardPageClient() {
     let cancelled = false;
 
     const loadDashboard = async () => {
-      setLoading(true);
+      const cachedStats = getClientCache<UserStatsSummary>(CACHE_STATS) ?? getClientCache<UserStatsSummary>(API_CACHE_STATS);
+      const cachedResults =
+        getClientCache<UserResultSummary[]>(CACHE_RESULTS) ?? getClientCache<UserResultSummary[]>(API_CACHE_RESULTS);
+      const cachedLeaderboard =
+        getClientCache<LeaderboardEntry[]>(CACHE_LEADERBOARD) ?? getClientCache<LeaderboardEntry[]>(API_CACHE_LEADERBOARD);
+      const hasCachedDashboardData =
+        cachedStats !== undefined && cachedResults !== undefined && cachedLeaderboard !== undefined;
+
+      if (hasCachedDashboardData) {
+        setUserStats(cachedStats);
+        setUserResults(cachedResults);
+        setLeaderboard(cachedLeaderboard);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
 
       await preloadInitialAppData({
         role: session.user.role,
@@ -65,20 +102,20 @@ export default function DashboardPageClient() {
         return;
       }
 
-      const cachedStats = getClientCache<UserStatsSummary>(CACHE_STATS) ?? getClientCache<UserStatsSummary>(API_CACHE_STATS);
-      const cachedResults =
+      const warmedStats = getClientCache<UserStatsSummary>(CACHE_STATS) ?? getClientCache<UserStatsSummary>(API_CACHE_STATS);
+      const warmedResults =
         getClientCache<UserResultSummary[]>(CACHE_RESULTS) ?? getClientCache<UserResultSummary[]>(API_CACHE_RESULTS);
-      const cachedLeaderboard =
+      const warmedLeaderboard =
         getClientCache<LeaderboardEntry[]>(CACHE_LEADERBOARD) ?? getClientCache<LeaderboardEntry[]>(API_CACHE_LEADERBOARD);
 
-      if (cachedStats !== undefined && cachedResults !== undefined && cachedLeaderboard !== undefined) {
+      if (warmedStats !== undefined && warmedResults !== undefined && warmedLeaderboard !== undefined) {
         if (!cancelled) {
-          setClientCache(CACHE_STATS, cachedStats);
-          setClientCache(CACHE_RESULTS, cachedResults);
-          setClientCache(CACHE_LEADERBOARD, cachedLeaderboard);
-          setUserStats(cachedStats);
-          setUserResults(cachedResults);
-          setLeaderboard(cachedLeaderboard);
+          setClientCache(CACHE_STATS, warmedStats);
+          setClientCache(CACHE_RESULTS, warmedResults);
+          setClientCache(CACHE_LEADERBOARD, warmedLeaderboard);
+          setUserStats(warmedStats);
+          setUserResults(warmedResults);
+          setLeaderboard(warmedLeaderboard);
           setLoading(false);
         }
         return;
@@ -118,7 +155,7 @@ export default function DashboardPageClient() {
     return () => {
       cancelled = true;
     };
-  }, [router, session?.user?.hasCompletedProfile, session?.user?.role, status]);
+  }, [hasHydratedClientCache, router, session?.user?.hasCompletedProfile, session?.user?.role, status]);
 
   if (status === "loading" || loading) {
     return <Loading showQuote={false} />;
