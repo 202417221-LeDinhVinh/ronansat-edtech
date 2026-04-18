@@ -9,10 +9,10 @@ import { useSession } from "next-auth/react";
 
 import InitialTabBootReady from "@/components/InitialTabBootReady";
 import AuthWorkbookShell from "@/components/auth/AuthWorkbookShell";
-import Loading from "@/components/Loading";
 import { API_PATHS } from "@/lib/apiPaths";
 import api from "@/lib/axios";
 import { getPostAuthRedirectPath } from "@/lib/getPostAuthRedirectPath";
+import { USERNAME_REQUIREMENTS } from "@/lib/userProfile";
 
 const FIELD_CLASS_NAME = "workbook-input";
 const MESSAGE_CLASS_NAME =
@@ -26,6 +26,8 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,7 @@ export default function AuthPage() {
   }, [router, session?.user, session?.user?.hasCompletedProfile, session?.user?.role, status]);
 
   if (status === "loading" || status === "authenticated") {
-    return <Loading showQuote={false} />;
+    return null;
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -71,7 +73,13 @@ export default function AuthPage() {
         return;
       }
 
-      const response = await api.post(API_PATHS.AUTH_REGISTER, { email, password, name });
+      const response = await api.post(API_PATHS.AUTH_REGISTER, {
+        email,
+        password,
+        name,
+        username,
+        birthDate,
+      });
 
       if (response.status >= 200 && response.status < 300) {
         setMessage("Account created. Redirecting into your workbook...");
@@ -147,6 +155,42 @@ export default function AuthPage() {
               onChange={(event) => setName(event.target.value)}
               className={FIELD_CLASS_NAME}
               placeholder="Ronan Student"
+            />
+          </div>
+        ) : null}
+
+        {!isLogin ? (
+          <div>
+            <label className="mb-2 block text-sm font-bold uppercase tracking-[0.16em] text-ink-fg">
+              Username
+            </label>
+            <input
+              type="text"
+              required
+              value={username}
+              onChange={(event) => setUsername(event.target.value.toLowerCase())}
+              className={FIELD_CLASS_NAME}
+              placeholder="ronan_reader"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <p className="mt-2 text-sm text-ink-fg/70">{USERNAME_REQUIREMENTS}</p>
+          </div>
+        ) : null}
+
+        {!isLogin ? (
+          <div>
+            <label className="mb-2 block text-sm font-bold uppercase tracking-[0.16em] text-ink-fg">
+              Birthdate
+            </label>
+            <input
+              type="date"
+              required
+              value={birthDate}
+              onChange={(event) => setBirthDate(event.target.value)}
+              className={FIELD_CLASS_NAME}
+              max={new Date().toISOString().slice(0, 10)}
             />
           </div>
         ) : null}

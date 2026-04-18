@@ -1,12 +1,13 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import type { VocabBoardState } from "@/lib/vocabBoard";
+import { normalizeUsername } from "@/lib/userProfile";
 
 function normalizeOptionalUsername(value: unknown) {
     if (typeof value !== "string") {
         return value;
     }
 
-    const normalizedValue = value.trim().toLowerCase();
+    const normalizedValue = normalizeUsername(value);
     return normalizedValue.length > 0 ? normalizedValue : undefined;
 }
 
@@ -42,7 +43,7 @@ const UserSchema: Schema<IUser> = new Schema(
             maxlength: 20,
             match: /^[a-z0-9_]+$/,
         },
-        birthDate: { type: String, required: false },
+        birthDate: { type: String, required: false, trim: true },
         email: { type: String, required: true, unique: true, trim: true, lowercase: true, set: normalizeRequiredEmail },
         password: { type: String, required: false, select: false },
         role: { type: String, enum: ["STUDENT", "PARENT", "ADMIN"], default: "STUDENT" },

@@ -282,3 +282,12 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - Student accounts now need a one-time welcome setup with an immutable `username` and `birthDate` before entering the main app.
 - Username availability should stay efficient by querying a sparse unique MongoDB index on the normalized lowercase `username` field rather than scanning names or using regex lookups.
 - Settings should show student identity details as locked read-only values, not as editable profile fields.
+
+### 2026-04-18 Isolated Stability Port
+
+- The current implementation pass is limited to isolated fixes for register/schema wiring, onboarding persistence, rich text and mixed LaTeX rendering, and client cache services.
+- `InitialTabBootOverlay` and `InitialTabBootReady` remain the only global boot-loading owners during this pass; no new `loading.tsx` files or local loading components should be introduced.
+- If a touched flow already contains a local loading component that overlaps with the global boot overlay, prefer removing or downgrading that local loader instead of layering another indicator on top.
+- The auth signup surface and the welcome onboarding page now avoid rendering local `<Loading />` states so the initial boot overlay remains the sole global loader during session resolution.
+- Rich text rendering continues to flow through the shared `utils/renderContent.tsx` entrypoint, but now uses a stricter dollar/LaTeX tokenizer plus contextual normalization so malformed currency-like `$...$` content no longer collapses prose spacing or eats surrounding text.
+- Client cache services now use shared read-through caching with TTL-backed session storage and in-flight request deduplication instead of separate ad hoc cache-hit logic in each service.

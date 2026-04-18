@@ -7,6 +7,7 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import {
   USERNAME_REQUIREMENTS,
+  hasCompletedStudentProfile,
   isValidBirthDate,
   isValidUsername,
   normalizeUsername,
@@ -47,6 +48,10 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    if (user.role !== "STUDENT") {
+      return NextResponse.json({ error: "Only student accounts use welcome setup." }, { status: 403 });
+    }
+
     if (user.username && user.username !== username) {
       return NextResponse.json({ error: "Username is already locked for this account." }, { status: 409 });
     }
@@ -71,7 +76,7 @@ export async function PUT(req: Request) {
         user: {
           username: user.username,
           birthDate: user.birthDate,
-          hasCompletedProfile: true,
+          hasCompletedProfile: hasCompletedStudentProfile(user),
         },
       },
       { status: 200 }
