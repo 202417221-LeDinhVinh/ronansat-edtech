@@ -77,17 +77,20 @@ bun install
 
 Fastest path to a working local setup:
 
+Get `.env.keys` from a trusted teammate, then run:
+
 ```bash
 bun install
-cp .env.example .env.local
 bun run dev
 ```
 
-The current workspace already has a populated `.env.local`, so on this machine `bun run dev` is ready to use.
+The committed `.env.development` file is encrypted. `bun run dev` now expects the matching local `.env.keys` file, plus an optional `.env.local` for personal overrides.
 
 ## 6. Fastest local setup
 
-If you only want to boot the app and start developing, create a `.env.local` file with at least:
+If you only want to boot the app and start developing, get the team `.env.keys` file first. Then create a `.env.local` only if you need personal overrides such as a different MongoDB or Redis target.
+
+Typical `.env.local` override example:
 
 ```env
 MONGODB_URI=<mongodb connection string>
@@ -115,7 +118,39 @@ Important notes:
 
 ## 7. Environment variables
 
-The repo now includes a committed `.env.example`. Copy it to `.env.local` or `.env` for local development, then fill in the real values.
+The repo now includes a committed `.env.example` for reference and a committed encrypted `.env.development` for shared development values.
+
+This repo uses an encrypted shared development env with `dotenvx`:
+
+- commit `.env.development` as the team-shared encrypted file
+- commit `.env.production` when you want a separately encrypted production file
+- keep `.env.keys` local and never commit it
+- keep `.env.local` for personal overrides on top of the shared development values
+
+Run the app in development with the encrypted shared env loaded through `dotenvx`:
+
+```bash
+bun run dev
+```
+
+Production build and start use `.env.production`:
+
+```bash
+bun run build
+bun run start
+```
+
+To update the shared encrypted development env:
+
+```bash
+./node_modules/.bin/dotenvx decrypt -f .env.development
+# edit .env.development
+./node_modules/.bin/dotenvx encrypt -f .env.development
+```
+
+You can distribute the encrypted `.env.development` through git, and distribute the matching `.env.keys` to trusted developers through a separate secure channel.
+
+`bun run dev` loads `.env.development` plus optional `.env.local` overrides. `bun run build` and `bun run start` load `.env.production` so deployment uses the production environment file rather than the development one.
 
 Environment variables used by the codebase:
 
@@ -381,10 +416,12 @@ After configuring the environment and running `bun run dev`, verify in this orde
 Cause:
 
 - `.env.local` is missing
+- `.env.keys` is missing, so `.env.development` could not be decrypted
 - `MONGODB_URI` is missing or invalid
 
 Fix:
 
+- make sure `.env.keys` is present
 - create `.env.local`
 - check the MongoDB connection string
 
@@ -423,8 +460,8 @@ Check:
 If you want the fastest path to a working local environment:
 
 1. Run `bun install`.
-2. Create `.env.local`.
-3. Fill in `MONGODB_URI`, `NEXTAUTH_SECRET`, and `REDIS_URL`.
+2. Get `.env.keys` from a trusted teammate.
+3. Create `.env.local` only if you need local overrides.
 4. Run `bun run dev`.
 5. Run `bun run seed`.
 6. Confirm sign-up and login work.
