@@ -62,8 +62,11 @@ function getOnboardingErrorResponse(error: unknown) {
 }
 
 export async function PUT(req: Request) {
+  let sessionUserId: string | undefined;
+
   try {
     const session = await getServerSession(authOptions);
+    sessionUserId = session?.user?.id;
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -124,7 +127,7 @@ export async function PUT(req: Request) {
     const errorResponse = getOnboardingErrorResponse(error);
 
     console.error("PUT /api/user/onboarding error:", {
-      userId: session?.user?.id,
+      userId: sessionUserId,
       error,
       response: errorResponse,
     });
