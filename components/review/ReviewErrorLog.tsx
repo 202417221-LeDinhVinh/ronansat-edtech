@@ -375,7 +375,7 @@ export function ReviewErrorLog({ testType, onViewQuestion, onUpdateReason }: Rev
         </section>
 
       <Table>
-        <TableCaption>
+        <TableCaption className="pb-2">
           {loadingRows ? "Loading the latest 20 mistakes..." : `${rows.length} entries currently loaded in this error log view.`}
         </TableCaption>
         <TableHeader className="sticky top-0 z-10">
@@ -557,7 +557,7 @@ export function ReviewErrorLog({ testType, onViewQuestion, onUpdateReason }: Rev
                           />
                         </div>
 
-                        <div className="text-xs font-black uppercase tracking-[0.16em] text-ink-fg">Colour presets</div>
+                        <div className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-ink-fg">Colour presets</div>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {REVIEW_REASON_COLOR_PRESETS.map((preset) => {
                             const textColor = getReadableTextColor(preset);

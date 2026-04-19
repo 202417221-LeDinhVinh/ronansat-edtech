@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth/server";
 import { ZodError } from "zod";
 
-import { authOptions } from "@/lib/authOptions";
 import { resultService } from "@/lib/services/resultService";
 
 function mapCreateResultError(error: unknown) {
@@ -33,7 +32,7 @@ function mapCreateResultError(error: unknown) {
 export const resultController = {
   async createResult(req: Request) {
     try {
-      const session = await getServerSession(authOptions);
+      const session = await getServerSession();
       if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
@@ -50,7 +49,7 @@ export const resultController = {
 
   async getUserResults(req: Request) {
     try {
-      const session = await getServerSession(authOptions);
+      const session = await getServerSession();
       if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
@@ -69,7 +68,7 @@ export const resultController = {
 
   async getUserErrorLog(req: Request) {
     try {
-      const session = await getServerSession(authOptions);
+      const session = await getServerSession();
       if (!session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
@@ -99,7 +98,7 @@ export const resultController = {
 
   async updateAnswerReason(req: Request) {
     try {
-      const session = await getServerSession(authOptions);
+      const session = await getServerSession();
       if (!session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }

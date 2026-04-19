@@ -1,6 +1,10 @@
-export type Role = "STUDENT" | "ADMIN";
+export type Role = "STUDENT" | "TEACHER" | "ADMIN";
 
 export function normalizeRole(role: string | undefined | null): Role {
+  if (role === "TEACHER") {
+    return "TEACHER";
+  }
+
   return role === "ADMIN" ? "ADMIN" : "STUDENT";
 }
 
@@ -18,6 +22,22 @@ export const ROLE_PERMISSIONS = {
     "progress.readOwn",
     "review.readOwn",
     "pdf.exportOwn",
+  ],
+  TEACHER: [
+    "auth.login",
+    "user.readSelf",
+    "user.updateSelfProfile",
+    "test.readList",
+    "test.readDetail",
+    "question.readByTest",
+    "question.readExplanation",
+    "result.createOwn",
+    "result.readOwn",
+    "progress.readOwn",
+    "review.readOwn",
+    "pdf.exportOwn",
+    "group.readOwn",
+    "group.manageOwn",
   ],
   ADMIN: ["*"],
 } as const satisfies Record<Role, readonly string[]>;

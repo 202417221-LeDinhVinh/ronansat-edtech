@@ -17,7 +17,6 @@ export const API_PATHS = {
     RESULT_REASON: "/api/results/reason",
     RESULT_ERROR_LOG: "/api/results/error-log",
     TESTS: "/api/tests",
-    AUTH_REGISTER: "/api/auth/register",
     // Dynamic routes
 
     getQuestionsByTestId: (testId: string) => `/api/questions?testId=${testId}`,

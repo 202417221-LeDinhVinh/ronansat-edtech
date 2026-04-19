@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/client";
 import { useSearchParams } from "next/navigation";
 
 import { getClientCache, setClientCache } from "@/lib/clientCache";

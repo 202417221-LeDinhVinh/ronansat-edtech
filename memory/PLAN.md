@@ -98,6 +98,21 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 
 ## Reflection
 
+### 2026-04-19 Supabase Migration Start
+
+- A major migration is now in progress to replace `NextAuth + MongoDB` app persistence with `Supabase Auth + Postgres + RLS`, while temporarily keeping `FixBoard` and reported-question workflows in MongoDB.
+- The migration order is now: local Supabase setup first, normalized SQL schema and RLS second, then auth cutover, then exams/questions, then attempts/review, then remaining user-owned data such as settings, vocab, and review reasons.
+- Public exams should only be readable by authenticated users, not anonymous visitors.
+- Teachers should fully manage only their own groups and memberships.
+- Multiple-choice questions should store answer keys by foreign key to `question_options`, while SPR questions should use a separate accepted-answers table.
+- Mongo-backed fix workflows require a stable SQL bridge, so migrated `tests`, `questions`, and `attempts` should preserve `legacy_mongo_id` values for cross-database lookups during transition.
+
+### 2026-04-20 Supabase Migration Pipeline
+
+- Pull requests that modify Supabase migration inputs should prove the full local migration set still applies cleanly from scratch.
+- Pushes to `main` that include those migration changes should automatically push the linked schema state to the production Supabase project.
+- Production migration automation should rely on the GitHub `production` environment with `DOTENV_PRIVATE_KEY_PRODUCTION`, `SUPABASE_ACCESS_TOKEN`, and `SUPABASE_DB_PASSWORD` rather than hardcoded credentials.
+
 ### 2026-04-13 v0.1 Reset
 
 - `v0.1` should be treated as an app-wide redesign milestone, not a narrow landing-page port.

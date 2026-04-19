@@ -1,37 +1,37 @@
 import { NextResponse } from "next/server";
-import type { Session } from "next-auth";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth/server";
 
-import { authOptions } from "@/lib/authOptions";
-import dbConnect from "@/lib/mongodb";
-import User from "@/lib/models/User";
 import { isDefaultReviewReasonCatalog, normalizeReviewReasonCatalog } from "@/lib/reviewReasonCatalog";
-
-function getUserLookup(session: Session | null) {
-  if (session?.user?.id) {
-    return { _id: session.user.id };
-  }
-
-  if (session?.user?.email) {
-    return { email: session.user.email };
-  }
-
-  return null;
-}
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    const userLookup = getUserLookup(session);
-
-    if (!userLookup) {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await dbConnect();
-    const user = await User.findOne(userLookup).select("reviewReasonCatalog").lean<{ reviewReasonCatalog?: unknown } | null>();
+    const supabase = createSupabaseAdminClient();
+    const { data, error } = await supabase
+      .from("user_review_reasons")
+      .select("id,label,color,sort_order")
+      .eq("user_id", session.user.id)
+      .order("sort_order", { ascending: true });
 
-    return NextResponse.json({ reasons: normalizeReviewReasonCatalog(user?.reviewReasonCatalog) }, { status: 200 });
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({
+      reasons: normalizeReviewReasonCatalog(
+        (data ?? []).map((reason) => ({
+          id: reason.id,
+          label: reason.label,
+          color: reason.color,
+          order: reason.sort_order,
+        }))
+      ),
+    });
   } catch (error) {
     console.error("GET /api/user/review-reasons error:", error);
     return NextResponse.json({ error: "Failed to load review reasons" }, { status: 500 });
@@ -40,24 +40,32 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const userLookup = getUserLookup(session);
-
-    if (!userLookup) {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const reasons = normalizeReviewReasonCatalog(body?.reasons);
-    const update = isDefaultReviewReasonCatalog(reasons)
-      ? { $unset: { reviewReasonCatalog: 1 } }
-      : { $set: { reviewReasonCatalog: reasons } };
+    const supabase = createSupabaseAdminClient();
 
-    await dbConnect();
-    const result = await User.updateOne(userLookup, update);
+    await supabase.from("user_review_reasons").delete().eq("user_id", session.user.id);
 
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!isDefaultReviewReasonCatalog(reasons)) {
+      const { error } = await supabase.from("user_review_reasons").insert(
+        reasons.map((reason) => ({
+          id: reason.id,
+          user_id: session.user.id,
+          label: reason.label,
+          color: reason.color,
+          sort_order: reason.order,
+          is_active: true,
+        }))
+      );
+
+      if (error) {
+        throw error;
+      }
     }
 
     return NextResponse.json({ message: "Review reasons saved", reasons }, { status: 200 });
