@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { mapDatabaseRolesToAppRole } from "@/lib/auth/session";
 import type { DashboardOverview } from "@/types/dashboard";
 
 export const userService = {
@@ -30,15 +31,17 @@ export const userService = {
       throw new Error("User not found");
     }
 
-    const rolesValue = (profile.user_roles?.[0] as { roles?: { code?: string } | Array<{ code?: string }> } | undefined)?.roles;
-    const roleCode = Array.isArray(rolesValue) ? rolesValue[0]?.code : rolesValue?.code;
+    const roleCodes = (profile.user_roles ?? []).map((userRole) => {
+      const rolesValue = (userRole as { roles?: { code?: string } | Array<{ code?: string }> }).roles;
+      return Array.isArray(rolesValue) ? rolesValue[0]?.code : rolesValue?.code;
+    });
 
     return {
       name: profile.display_name,
       username: profile.username,
       birthDate: profile.birth_date,
       email: authUser.user.email,
-      role: roleCode === "admin" ? "ADMIN" : roleCode === "teacher" ? "TEACHER" : "STUDENT",
+      role: mapDatabaseRolesToAppRole(roleCodes),
       createdAt: profile.created_at,
       updatedAt: profile.updated_at,
     };

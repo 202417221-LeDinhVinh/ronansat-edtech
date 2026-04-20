@@ -42,8 +42,8 @@ This file is the canonical agent-facing instruction document for repository-wide
 
 - Keep visual components presentational where practical. Pass prepared data and state in through props instead of mixing dense logic into the rendered markup.
 - Default to small, focused UI components. If a component starts rendering multiple distinct sections or becomes hard to scan in one pass, split it into nearby presentational subcomponents unless the UI is truly trivial.
-- Reuse existing page-level controller hooks such as `useReviewPageController`, `useFixPageController`, `useSectionalTestsController`, and `useVocabPageController` when extending those areas.
-- Prefer extending existing UI families in `components/landing/`, `components/dashboard/`, `components/review/`, `components/test/`, `components/fix/`, and `components/vocab/` over creating near-duplicate component sets.
+- Reuse existing page-level controller hooks such as `useReviewPageController`, `useTestManagerPageController`, `useSectionalTestsController`, and `useVocabPageController` when extending those areas.
+- Prefer extending existing UI families in `components/landing/`, `components/dashboard/`, `components/review/`, `components/test/`, `components/test-manager/`, and `components/vocab/` over creating near-duplicate component sets.
 - When changing shared shell behavior, check `app/layout.tsx`, `components/Navbar.tsx`, and `app/globals.css` first so the result stays coherent across the product.
 
 ## Data and service rules

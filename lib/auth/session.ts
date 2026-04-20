@@ -9,6 +9,7 @@ export type AppSessionUser = {
   email?: string | null;
   name?: string | null;
   role: AppRole;
+  permissions: string[];
   username?: string;
   birthDate?: string;
   hasCompletedProfile: boolean;
@@ -18,28 +19,92 @@ export type AppSession = {
   user: AppSessionUser;
 };
 
+export function mapDatabaseRolesToAppRole(roleCodes: Array<string | null | undefined>): AppRole {
+  if (roleCodes.includes("admin")) {
+    return "ADMIN";
+  }
+
+  if (roleCodes.includes("teacher")) {
+    return "TEACHER";
+  }
+
+  return "STUDENT";
+}
+
 type ProfileRow = {
-  id: string;
+  id?: string;
   username: string | null;
   display_name: string | null;
   birth_date: string | null;
   user_roles: Array<{
     roles: {
-      code: "student" | "teacher" | "admin";
-    } | null;
+      code: string;
+      role_permissions?: Array<{
+        permissions?: {
+          code?: string | null;
+        } | Array<{
+          code?: string | null;
+        }> | null;
+      }> | null;
+    } | Array<{
+      code: string;
+      role_permissions?: Array<{
+        permissions?: {
+          code?: string | null;
+        } | Array<{
+          code?: string | null;
+        }> | null;
+      }> | null;
+    }> | null;
   }> | null;
 };
 
+function readNestedCode(value: { code?: string | null } | Array<{ code?: string | null }> | null | undefined) {
+  return Array.isArray(value) ? value[0]?.code : value?.code;
+}
+
+function readRolePermissions(
+  value:
+    | {
+        role_permissions?: Array<{
+          permissions?: { code?: string | null } | Array<{ code?: string | null }> | null;
+        }> | null;
+      }
+    | Array<{
+        role_permissions?: Array<{
+          permissions?: { code?: string | null } | Array<{ code?: string | null }> | null;
+        }> | null;
+      }>
+    | null
+    | undefined,
+) {
+  return Array.isArray(value) ? value[0]?.role_permissions ?? [] : value?.role_permissions ?? [];
+}
+
+export function getProfileRoleCodes(profile: ProfileRow | null | undefined) {
+  return (profile?.user_roles ?? []).map((userRole) => readNestedCode(userRole.roles)).filter((code): code is string => Boolean(code));
+}
+
+export function getProfilePermissionCodes(profile: ProfileRow | null | undefined) {
+  const permissionCodes = new Set<string>();
+
+  for (const userRole of profile?.user_roles ?? []) {
+    const rolePermissions = readRolePermissions(userRole.roles);
+
+    for (const rolePermission of rolePermissions) {
+      const code = readNestedCode(rolePermission.permissions);
+
+      if (code) {
+        permissionCodes.add(code);
+      }
+    }
+  }
+
+  return Array.from(permissionCodes).sort();
+}
+
 export function mapDatabaseRoleToAppRole(roleCode: string | null | undefined): AppRole {
-  if (roleCode === "admin") {
-    return "ADMIN";
-  }
-
-  if (roleCode === "teacher") {
-    return "TEACHER";
-  }
-
-  return "STUDENT";
+  return mapDatabaseRolesToAppRole([roleCode]);
 }
 
 export function hasCompletedProfileValue(profile: { username?: string | null; birth_date?: string | null; birthDate?: string | null }) {
@@ -47,8 +112,9 @@ export function hasCompletedProfileValue(profile: { username?: string | null; bi
 }
 
 export function buildAppSession(user: User, profile: ProfileRow | null): AppSession {
-  const roleCode = profile?.user_roles?.[0]?.roles?.code;
-  const role = mapDatabaseRoleToAppRole(roleCode);
+  const roleCodes = getProfileRoleCodes(profile);
+  const permissions = getProfilePermissionCodes(profile);
+  const role = mapDatabaseRolesToAppRole(roleCodes);
   const birthDate = profile?.birth_date ?? undefined;
   const username = profile?.username ?? undefined;
   const name = profile?.display_name ?? user.user_metadata?.name ?? user.email ?? null;
@@ -59,6 +125,7 @@ export function buildAppSession(user: User, profile: ProfileRow | null): AppSess
       email: user.email ?? null,
       name,
       role,
+      permissions,
       username,
       birthDate,
       hasCompletedProfile: hasCompletedProfileValue({ username, birthDate }),
@@ -87,7 +154,12 @@ export async function getServerAppSession(): Promise<AppSession | null> {
         birth_date,
         user_roles (
           roles (
-            code
+            code,
+            role_permissions (
+              permissions (
+                code
+              )
+            )
           )
         )
       `

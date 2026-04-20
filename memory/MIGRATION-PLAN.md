@@ -2,7 +2,7 @@
 
 ## Goal
 
-Migrate the application from `NextAuth + MongoDB` to `Supabase Auth + Postgres + RLS`, while temporarily retaining MongoDB only for `FixBoard` and reported-question workflows.
+Migrate the application from `NextAuth + MongoDB` to `Supabase Auth + Postgres + RLS`, while temporarily retaining MongoDB only for `TestManagerBoard` and reported-question workflows.
 
 ## Product decisions
 
@@ -158,7 +158,7 @@ Migrate the application from `NextAuth + MongoDB` to `Supabase Auth + Postgres +
 - Tests, questions, question explanations, and the main test/question services now read and write through Supabase/Postgres.
 - User stats, review reason catalog, vocab board, and password changes now use Supabase-backed routes.
 - Result creation, result history reads, review error-log reads, and answer-reason updates now route through the new Postgres-backed `resultService`.
-- Mongo fix-board routes remain in place, but `/api/fix-reports` now resolves incoming SQL UUID test/question ids back to `legacy_mongo_id` before writing into the Mongo board.
+- Mongo test-manager routes remain in place, but `/api/test-manager-reports` now resolves incoming SQL UUID test/question ids back to `legacy_mongo_id` before writing into the Mongo board.
 
 ## Remaining work
 
@@ -181,7 +181,7 @@ Migrate the application from `NextAuth + MongoDB` to `Supabase Auth + Postgres +
   - unused Mongoose models and services for migrated areas
   - stale helper code that only existed for NextAuth/Mongo session hydration
 - Audit all remaining Mongo dependencies and confirm they are intentionally retained:
-  - `FixBoard`
+  - `TestManagerBoard`
   - fix report workflow
   - student hall-of-fame card content if still intended to remain on Mongo
 - Resolve the skipped legacy migration rows before production migration:

@@ -1,4 +1,5 @@
 import { getServerSession } from "@/lib/auth/server";
+import { mapDatabaseRolesToAppRole } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 import AdminDashboardClient from "@/components/admin/AdminDashboardClient";
@@ -36,9 +37,14 @@ export default async function AdminDashboardPage() {
     redirect("/welcome");
   }
 
-  const rolesValue = (profile.user_roles?.[0] as { roles?: { code?: string } | Array<{ code?: string }> } | undefined)?.roles;
-  const roleCode = Array.isArray(rolesValue) ? rolesValue[0]?.code : rolesValue?.code;
-  if (roleCode !== "admin") {
+  const role = mapDatabaseRolesToAppRole(
+    (profile.user_roles ?? []).map((userRole) => {
+      const rolesValue = userRole.roles as { code?: string } | Array<{ code?: string }> | undefined;
+      return Array.isArray(rolesValue) ? rolesValue[0]?.code : rolesValue?.code;
+    }),
+  );
+
+  if (role !== "ADMIN") {
     redirect("/dashboard");
   }
 

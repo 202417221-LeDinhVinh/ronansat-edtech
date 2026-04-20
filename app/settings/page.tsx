@@ -2,7 +2,8 @@
 
 import { useSession } from "@/lib/auth/client";
 import { useState, useEffect } from "react";
-import { CheckCircle, Lock, MonitorPlay, TriangleAlert, User } from "lucide-react";
+import { AxiosError } from "axios";
+import { CheckCircle, Copy, KeyRound, Lock, MonitorPlay, RefreshCcw, TriangleAlert, User } from "lucide-react";
 
 import InitialTabBootReady from "@/components/InitialTabBootReady";
 import { useTestingRoomTheme } from "@/hooks/useTestingRoomTheme";
@@ -13,6 +14,7 @@ import {
     listTestingRoomThemePresets,
     type TestingRoomTheme,
 } from "@/lib/testingRoomTheme";
+import type { GroupAccessTokenResponse, GroupAccessTokenStatus } from "@/types/group";
 
 export default function SettingsPage() {
     const { data: session, status } = useSession();
@@ -192,6 +194,8 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
+                <GroupAccessTokenCard />
+
                 <div className="workbook-panel overflow-hidden">
                     <div className="p-5 border-b-4 border-ink-fg bg-paper-bg flex items-center gap-2 text-ink-fg font-bold">
                         <Lock className="w-5 h-5 text-accent-1" />
@@ -341,6 +345,157 @@ function formatBirthDate(value?: string) {
         day: "numeric",
         year: "numeric",
     }).format(new Date(year, month - 1, day));
+}
+
+function GroupAccessTokenCard() {
+    const [status, setStatus] = useState<GroupAccessTokenStatus | null>(null);
+    const [revealedToken, setRevealedToken] = useState<string>("");
+    const [message, setMessage] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const loadStatus = async () => {
+            try {
+                setLoading(true);
+                const response = await api.get<GroupAccessTokenStatus>(API_PATHS.USER_GROUP_ACCESS_TOKEN);
+                setStatus(response.data);
+            } catch (error) {
+                setMessage(getSettingsApiError(error, "Could not load your group access token."));
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void loadStatus();
+    }, []);
+
+    const handleGenerateToken = async () => {
+        try {
+            setSaving(true);
+            setMessage("");
+            const response = await api.post<GroupAccessTokenResponse>(API_PATHS.USER_GROUP_ACCESS_TOKEN, { regenerate: true });
+            setStatus(response.data);
+            setRevealedToken(response.data.token ?? "");
+            setMessage(response.data.rotatedAt ? "A new token is ready. Older tokens will no longer work for future invites." : "Your new token is ready.");
+        } catch (error) {
+            setMessage(getSettingsApiError(error, "Could not generate a new group access token."));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleCopyToken = async () => {
+        if (!revealedToken) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(revealedToken);
+            setMessage("Token copied to your clipboard.");
+        } catch {
+            setMessage("Could not copy the token automatically. You can still select and copy it manually.");
+        }
+    };
+
+    return (
+        <div className="workbook-panel overflow-hidden">
+            <div className="p-5 border-b-4 border-ink-fg bg-paper-bg flex items-center gap-2 text-ink-fg font-bold">
+                <KeyRound className="w-5 h-5 text-accent-1" />
+                Group Access Token
+            </div>
+
+            <div className="p-6 space-y-5">
+                {message ? (
+                    <div className={`rounded-2xl border-2 border-ink-fg px-4 py-3 text-sm font-medium brutal-shadow-sm ${message.toLowerCase().includes("could not") ? "bg-accent-3 text-white" : "bg-paper-bg text-ink-fg"}`}>
+                        {message}
+                    </div>
+                ) : null}
+
+                <div className="max-w-3xl">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-ink-fg">Invite Check</p>
+                    <p className="mt-2 text-sm leading-6 text-ink-fg/70">
+                        Generate a personal token when you want a group owner to verify your membership. Regenerating it keeps existing group memberships intact, but it blocks future invites that still use the older token.
+                    </p>
+                </div>
+
+                {loading ? (
+                    <div className="h-12 animate-pulse rounded-2xl border-2 border-ink-fg bg-surface-white" />
+                ) : (
+                    <>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <TokenDetailCard label="Current Status" value={status?.hasToken ? "Generated" : "Not generated yet"} />
+                            <TokenDetailCard label="Last Generated" value={status?.generatedAt ? formatDateTime(status.generatedAt) : "-"} />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-ink-fg mb-1 uppercase tracking-[0.16em]">
+                                Token Preview
+                            </label>
+                            <input
+                                type="text"
+                                disabled
+                                value={revealedToken || status?.preview || "No token yet"}
+                                className="workbook-input max-w-2xl cursor-not-allowed bg-paper-bg text-ink-fg/60"
+                            />
+                            <p className="mt-2 text-xs leading-5 text-ink-fg/60">
+                                The full token is only shown right after you generate or regenerate it.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={handleGenerateToken}
+                                disabled={saving}
+                                className="workbook-button workbook-button-ink disabled:opacity-60"
+                            >
+                                {status?.hasToken ? <RefreshCcw className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
+                                {saving ? "Working..." : status?.hasToken ? "Regenerate Token" : "Generate Token"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => void handleCopyToken()}
+                                disabled={!revealedToken}
+                                className="workbook-button disabled:opacity-60"
+                            >
+                                <Copy className="w-4 h-4" />
+                                Copy Fresh Token
+                            </button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function TokenDetailCard({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-2xl border-2 border-ink-fg bg-surface-white p-4 brutal-shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-[0.16em] text-ink-fg/70">{label}</div>
+            <div className="mt-2 text-sm font-bold text-ink-fg">{value}</div>
+        </div>
+    );
+}
+
+function formatDateTime(value: string) {
+    return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(new Date(value));
+}
+
+function getSettingsApiError(error: unknown, fallback: string) {
+    if (error instanceof AxiosError) {
+        return error.response?.data?.error || fallback;
+    }
+
+    return fallback;
 }
 
 function ThemeOptionCard({

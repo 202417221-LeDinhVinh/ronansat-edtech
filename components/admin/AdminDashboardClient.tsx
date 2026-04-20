@@ -1,66 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import AdminActionDialog from "@/components/admin/AdminActionDialog";
 import InitialTabBootReady from "@/components/InitialTabBootReady";
-import CreateQuestionForm from "@/components/admin/CreateQuestionForm";
+import RoleManagementPanel from "@/components/admin/RoleManagementPanel";
 import CreateStudentForm from "@/components/admin/CreateStudentForm";
 import CreateTestForm from "@/components/admin/CreateTestForm";
-import { API_PATHS } from "@/lib/apiPaths";
-import api from "@/lib/axios";
-import type { TestListItem } from "@/types/testLibrary";
 
-const ADMIN_TESTS_PAGE_SIZE = 100;
-
-type TestsResponse = {
-  tests?: TestListItem[];
-  pagination?: {
-    totalPages?: number;
-  };
-};
+type AdminActionKey = "roles" | "tests" | "hall-of-fame" | null;
 
 export default function AdminDashboardClient() {
-  const [tests, setTests] = useState<TestListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [openAction, setOpenAction] = useState<AdminActionKey>(null);
 
-  useEffect(() => {
-    void fetchTests();
-  }, []);
-
-  const fetchTests = async () => {
-    try {
-      const firstPage = await api.get<TestsResponse>(
-        `${API_PATHS.TESTS}?page=1&limit=${ADMIN_TESTS_PAGE_SIZE}`
-      );
-      const totalPages = firstPage.data.pagination?.totalPages || 1;
-
-      if (totalPages <= 1) {
-        setTests(firstPage.data.tests || []);
-        return;
-      }
-
-      const remainingPages = await Promise.all(
-        Array.from({ length: totalPages - 1 }, (_, index) =>
-          api.get<TestsResponse>(
-            `${API_PATHS.TESTS}?page=${index + 2}&limit=${ADMIN_TESTS_PAGE_SIZE}`
-          )
-        )
-      );
-
-      setTests([
-        ...(firstPage.data.tests || []),
-        ...remainingPages.flatMap((page) => page.data.tests || []),
-      ]);
-    } catch (error) {
-      console.error("Failed to fetch tests", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return <AdminDashboardSkeleton />;
-  }
+  const actions = [
+    {
+      key: "roles" as const,
+      title: "Manage Roles",
+      description: "Create roles, update role permissions, and add people to roles. Default roles stay protected.",
+    },
+    {
+      key: "tests" as const,
+      title: "Create Test",
+      description: "Start a new SAT workbook with the default section structure.",
+    },
+    {
+      key: "hall-of-fame" as const,
+      title: "Add Hall of Fame Student",
+      description: "Save a standout score with the student photo and score details.",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-paper-bg p-8 pb-24">
@@ -68,59 +37,67 @@ export default function AdminDashboardClient() {
       <div className="mx-auto max-w-5xl space-y-8">
         <section className="workbook-panel-muted overflow-hidden">
           <div className="border-b-4 border-ink-fg bg-paper-bg px-6 py-5">
-            <div className="workbook-sticker bg-accent-3 text-white">Admin Desk</div>
-            <h1 className="mt-4 font-display text-4xl font-black uppercase tracking-tight text-ink-fg">Manage tests, questions, and showcase students.</h1>
+            <h1 className="font-display text-4xl font-black uppercase tracking-tight text-ink-fg">Admin Settings</h1>
+            <p className="mt-3 max-w-3xl text-sm text-ink-fg/70">
+              Keep the page simple: click a setting, work in the pop-up, then close it when you are done.
+            </p>
           </div>
         </section>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <CreateTestForm onSuccess={fetchTests} />
-          <CreateQuestionForm tests={tests} />
-        </div>
-
-        <CreateStudentForm />
-      </div>
-    </div>
-  );
-}
-
-function AdminDashboardSkeleton() {
-  return (
-    <div className="min-h-screen bg-paper-bg p-8 pb-24">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <section className="workbook-panel-muted overflow-hidden">
-          <div className="border-b-4 border-ink-fg bg-paper-bg px-6 py-5">
-            <div className="h-8 w-32 rounded-full border-2 border-ink-fg bg-surface-white animate-pulse" />
-            <div className="mt-4 h-12 w-full max-w-3xl rounded-md bg-surface-white/75 animate-pulse" />
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <section key={index} className="workbook-panel overflow-hidden">
-              <div className="border-b-4 border-ink-fg bg-paper-bg px-5 py-4">
-                <div className="h-7 w-32 rounded-md bg-surface-white/75 animate-pulse" />
-              </div>
-              <div className="space-y-4 p-5">
-                {Array.from({ length: 5 }).map((__, fieldIndex) => (
-                  <div key={fieldIndex} className="h-11 rounded-2xl border-2 border-ink-fg bg-surface-white animate-pulse" />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
 
         <section className="workbook-panel overflow-hidden">
-          <div className="border-b-4 border-ink-fg bg-paper-bg px-5 py-4">
-            <div className="h-7 w-40 rounded-md bg-surface-white/75 animate-pulse" />
+          <div className="border-b-4 border-ink-fg bg-paper-bg px-6 py-5">
+            <h2 className="font-display text-2xl font-black uppercase tracking-tight text-ink-fg">Actions</h2>
           </div>
-          <div className="grid gap-4 p-5 md:grid-cols-2">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="h-11 rounded-2xl border-2 border-ink-fg bg-surface-white animate-pulse" />
-            ))}
+
+          <div className="divide-y-2 divide-ink-fg">
+            {actions.map((action) => {
+              return (
+                <button
+                  key={action.key}
+                  type="button"
+                  onClick={() => setOpenAction(action.key)}
+                  className="flex w-full items-center justify-between gap-4 bg-surface-white px-6 py-5 text-left transition-colors hover:bg-paper-bg active:translate-x-0.5 active:translate-y-0.5"
+                >
+                  <div>
+                    <div className="text-lg font-black text-ink-fg">{action.title}</div>
+                    <p className="mt-1 max-w-2xl text-sm text-ink-fg/70">{action.description}</p>
+                  </div>
+
+                  <div className="text-xs font-bold uppercase tracking-[0.16em] text-ink-fg/55">Open</div>
+                </button>
+              );
+            })}
           </div>
         </section>
       </div>
+
+      <AdminActionDialog
+        open={openAction === "roles"}
+        onClose={() => setOpenAction(null)}
+        title="Manage Roles"
+        description="Only admin users can create roles, edit role permissions, and add people to roles. Default roles stay protected."
+        size="wide"
+      >
+        <RoleManagementPanel embedded />
+      </AdminActionDialog>
+
+      <AdminActionDialog
+        open={openAction === "tests"}
+        onClose={() => setOpenAction(null)}
+        title="Create Test"
+        description="Start a new workbook from a focused pop-up instead of the main admin page."
+      >
+        <CreateTestForm embedded />
+      </AdminActionDialog>
+
+      <AdminActionDialog
+        open={openAction === "hall-of-fame"}
+        onClose={() => setOpenAction(null)}
+        title="Add Hall of Fame Student"
+        description="Save standout student results from this pop-up instead of the main admin page."
+      >
+        <CreateStudentForm embedded />
+      </AdminActionDialog>
     </div>
   );
 }

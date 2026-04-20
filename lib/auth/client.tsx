@@ -74,18 +74,20 @@ async function fetchBrowserSession(user: User | null) {
 
   if (!response.ok) {
     return {
-      user: {
-        id: user.id,
-        email: user.email ?? null,
-        name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : user.email ?? null,
-        role: "STUDENT" as const,
-        hasCompletedProfile: false,
-      },
+        user: {
+          id: user.id,
+          email: user.email ?? null,
+          name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : user.email ?? null,
+          role: "STUDENT" as const,
+          permissions: [],
+          hasCompletedProfile: false,
+        },
     } satisfies AppSession;
   }
 
   const payload = (await response.json()) as {
     role?: AppSession["user"]["role"];
+    permissions?: string[];
     username?: string;
     birthDate?: string;
     displayName?: string;
@@ -95,12 +97,13 @@ async function fetchBrowserSession(user: User | null) {
   return {
     user: {
       id: user.id,
-      email: user.email ?? null,
-      name: payload.displayName ?? (typeof user.user_metadata?.name === "string" ? user.user_metadata.name : user.email ?? null),
-      role: payload.role ?? "STUDENT",
-      username: payload.username,
-      birthDate: payload.birthDate,
-      hasCompletedProfile: Boolean(payload.hasCompletedProfile),
+        email: user.email ?? null,
+        name: payload.displayName ?? (typeof user.user_metadata?.name === "string" ? user.user_metadata.name : user.email ?? null),
+        role: payload.role ?? "STUDENT",
+        permissions: payload.permissions ?? [],
+        username: payload.username,
+        birthDate: payload.birthDate,
+        hasCompletedProfile: Boolean(payload.hasCompletedProfile),
     },
   } satisfies AppSession;
 }

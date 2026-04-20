@@ -99,7 +99,7 @@ By default, `bun run dev` points the app at a local MongoDB database at `mongodb
 This repo currently uses two databases in development and production:
 
 - Supabase Postgres for auth, profiles, tests, questions, attempts, review data, settings, vocab, and the main app runtime
-- MongoDB for the remaining legacy fix-board and related bridge workflows
+- MongoDB for the remaining legacy test-manager board and related bridge workflows
 
 Local database behavior:
 

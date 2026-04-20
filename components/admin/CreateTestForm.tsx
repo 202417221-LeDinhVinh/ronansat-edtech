@@ -17,7 +17,7 @@ const panelHeaderClassName =
 
 const fieldLabelClassName = "mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-ink-fg/70";
 
-export default function CreateTestForm({ onSuccess }: { onSuccess: () => void }) {
+export default function CreateTestForm({ embedded = false }: { embedded?: boolean }) {
   const [testForm, setTestForm] = useState<CreateTestFormState>({
     title: "",
   });
@@ -39,7 +39,6 @@ export default function CreateTestForm({ onSuccess }: { onSuccess: () => void })
       if (res.status === 200 || res.status === 201) {
         setTestMessage("Test created successfully!");
         setTestForm({ title: "" });
-        onSuccess();
       } else {
         setTestMessage(`Error: ${String(res.data?.error || "Error creating test.")}`);
       }
@@ -51,14 +50,16 @@ export default function CreateTestForm({ onSuccess }: { onSuccess: () => void })
   };
 
   return (
-    <div className="space-y-8 lg:col-span-1">
-        <div className="workbook-panel overflow-hidden">
+    <div className={embedded ? "" : "space-y-8 lg:col-span-1"}>
+      <div className={embedded ? "" : "workbook-panel overflow-hidden"}>
+        {!embedded ? (
           <div className={panelHeaderClassName}>
             <div>
               <h2 className="font-display text-2xl font-black uppercase tracking-tight">Create Test</h2>
               <p className="text-sm text-ink-fg/70">Start a new SAT workbook with the default section structure.</p>
             </div>
           </div>
+        ) : null}
 
         <form className="p-5 space-y-5" onSubmit={handleCreateTest}>
           {testMessage && (

@@ -9,7 +9,7 @@ const panelHeaderClassName =
 
 const fieldLabelClassName = "mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-ink-fg/70";
 
-export default function CreateStudentForm() {
+export default function CreateStudentForm({ embedded = false }: { embedded?: boolean }) {
     const [studentForm, setStudentForm] = useState({
         name: "",
         school: "",
@@ -44,13 +44,15 @@ export default function CreateStudentForm() {
     };
 
     return (
-        <div className="workbook-panel mt-8 overflow-hidden">
-            <div className={panelHeaderClassName}>
-                <div>
-                    <h2 className="font-display text-2xl font-black uppercase tracking-tight">Add Hall of Fame Students</h2>
-                    <p className="text-sm text-ink-fg/70">Save standout student results with a photo and score details.</p>
+        <div className={embedded ? "" : "workbook-panel mt-8 overflow-hidden"}>
+            {!embedded ? (
+                <div className={panelHeaderClassName}>
+                    <div>
+                        <h2 className="font-display text-2xl font-black uppercase tracking-tight">Add Hall of Fame Students</h2>
+                        <p className="text-sm text-ink-fg/70">Save standout student results with a photo and score details.</p>
+                    </div>
                 </div>
-            </div>
+            ) : null}
 
             <form className="p-6 space-y-6" onSubmit={handleCreateStudent}>
                 {studentMessage && (

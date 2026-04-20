@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/server";
+import { getProfilePermissionCodes, getProfileRoleCodes, mapDatabaseRolesToAppRole } from "@/lib/auth/session";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -21,7 +22,12 @@ export async function GET() {
           birth_date,
           user_roles (
             roles (
-              code
+              code,
+              role_permissions (
+                permissions (
+                  code
+                )
+              )
             )
           )
         `
@@ -33,13 +39,13 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const rolesValue = (profile.user_roles?.[0] as { roles?: { code?: string } | Array<{ code?: string }> } | undefined)?.roles;
-    const roleCode = Array.isArray(rolesValue) ? rolesValue[0]?.code : rolesValue?.code;
-    const role = roleCode === "admin" ? "ADMIN" : roleCode === "teacher" ? "TEACHER" : "STUDENT";
+    const role = mapDatabaseRolesToAppRole(getProfileRoleCodes(profile));
+    const permissions = getProfilePermissionCodes(profile);
 
     return NextResponse.json(
       {
         role,
+        permissions,
         username: profile.username ?? undefined,
         birthDate: profile.birth_date ?? undefined,
         displayName: profile.display_name ?? undefined,

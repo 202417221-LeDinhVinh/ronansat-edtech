@@ -12,7 +12,7 @@ The current state is:
 - Core SQL schema and RLS exist.
 - Local migration scripts exist and were executed.
 - Main auth/runtime/service cutover has been implemented.
-- Mongo remains intentionally in use for `FixBoard` and fix reports.
+- Mongo remains intentionally in use for `TestManagerBoard` and test-manager reports.
 - Hall-of-fame student cards still remain in Mongo.
 - Some legacy data is malformed and was skipped during migration.
 
@@ -89,10 +89,10 @@ Moved to Supabase-backed runtime paths:
 
 ### Mongo retained intentionally
 
-- `app/api/fix-board/route.ts`
-- `app/api/fix-reports/route.ts`
+- `app/api/test-manager-board/route.ts`
+- `app/api/test-manager-reports/route.ts`
 - `app/api/students/route.ts`
-- legacy `FixBoard` model and Mongo connection for fix workflow
+- legacy `TestManagerBoard` model and Mongo connection for the test-manager workflow
 - legacy `studentCard` model for hall-of-fame cards
 
 ### Mongo removed after cutover
@@ -102,7 +102,7 @@ Moved to Supabase-backed runtime paths:
 - old Mongo-only seed/import scripts for tests/questions were removed
 - old SMTP email helper files were removed because password reset now uses Supabase Auth directly
 
-`/api/fix-reports` now maps Postgres UUID ids back to `legacy_mongo_id` before writing into Mongo.
+`/api/test-manager-reports` now maps Postgres UUID ids back to `legacy_mongo_id` before writing into Mongo.
 
 ## Data migration status
 

@@ -17,7 +17,7 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - Shared visual foundation in `app/globals.css`, `app/layout.tsx`, and shared shell/navigation components.
 - Public and auth-facing surfaces including `app/auth/**` and any entry flow that users see before reaching the app.
 - Student product surfaces including dashboard, full-length, sectional, review, test-taking, vocab, hall-of-fame, and settings.
-- Admin/fix workflows and remaining secondary surfaces.
+- Admin/test-manager workflows and remaining secondary surfaces.
 - Shared states such as loading, empty, modal, alert, table, form, and mobile navigation patterns.
 
 ## Non-goals for v0.1
@@ -34,7 +34,7 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 4. Done: redesign the global navigation and layout shell in `app/layout.tsx`, `components/AppShell.tsx`, and `components/Navbar.tsx` so the product now uses a workbook-style desktop binder nav and mobile bottom-tab shell.
 5. Done: redesign auth and entry flows in `app/auth/**` so first-use and sign-in surfaces match the new product language.
 6. Done: redesign the core student dashboards and test-library screens in `app/dashboard/page.tsx`, `app/full-length/page.tsx`, `app/sectional/page.tsx`, `app/hall-of-fame/page.tsx`, and related dashboard components.
-7. Done: redesign the deep-work learning screens in `app/review/page.tsx`, `app/vocab/page.tsx`, `app/fix/page.tsx`, and their main component families while preserving controller logic.
+7. Done: redesign the deep-work learning screens in `app/review/page.tsx`, `app/vocab/page.tsx`, `app/test-manager/page.tsx`, and their main component families while preserving controller logic.
 8. Done: redesign the live test-taking surface in `app/test/[id]/page.tsx` and related test components with special care for timing, density, readability, and press states.
 9. Done: redesign secondary product surfaces including `app/settings/page.tsx`, `app/hall-of-fame/page.tsx`, and `app/admin/page.tsx` so they stay within the same system rather than drifting back to generic panels.
 10. In progress: run a final consistency pass across loading, empty, success, error, and mobile states to remove leftover legacy styling and confirm the entire app feels like one `Living Workbook` product.
@@ -84,7 +84,7 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - `app/review/page.tsx`
 - `app/test/[id]/page.tsx`
 - `app/vocab/page.tsx`
-- `app/fix/page.tsx`
+- `app/test-manager/page.tsx`
 - `app/settings/page.tsx`
 - `app/hall-of-fame/page.tsx`
 - `app/admin/page.tsx`
@@ -100,7 +100,7 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 
 ### 2026-04-19 Supabase Migration Start
 
-- A major migration is now in progress to replace `NextAuth + MongoDB` app persistence with `Supabase Auth + Postgres + RLS`, while temporarily keeping `FixBoard` and reported-question workflows in MongoDB.
+- A major migration is now in progress to replace `NextAuth + MongoDB` app persistence with `Supabase Auth + Postgres + RLS`, while temporarily keeping `TestManagerBoard` and reported-question workflows in MongoDB.
 - The migration order is now: local Supabase setup first, normalized SQL schema and RLS second, then auth cutover, then exams/questions, then attempts/review, then remaining user-owned data such as settings, vocab, and review reasons.
 - Public exams should only be readable by authenticated users, not anonymous visitors.
 - Teachers should fully manage only their own groups and memberships.
@@ -119,6 +119,13 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - The Supabase portion should stay explicit and local-only: developers should authenticate the Supabase CLI with `supabase login`, then provide only `SUPABASE_DB_PASSWORD` and optional `SUPABASE_PROJECT_REF` locally.
 - The local Supabase refresh path should reset the local schema from committed migrations first, then import remote `public`, `auth`, and `storage` data from the linked production project.
 - After a successful local fetch, the repo should refresh a gitignored snapshot at `supabase/seeds/local-data.sql` so later local `supabase db reset` runs can restore fetched Supabase data without hitting production again.
+
+### 2026-04-20 Admin Role Management
+
+- The admin page is being repurposed to manage roles instead of question uploads.
+- Admins should be able to create custom roles, edit role permissions, delete only non-system roles, and add people to roles from the admin surface.
+- `student`, `teacher`, and `admin` remain seeded system roles; system roles cannot be deleted, and the `admin` role should be treated as immutable from the admin UI and API.
+- Supporting custom roles requires widening the Supabase `roles.code` column beyond the original enum-only values while preserving existing session logic that still derives app-level access from the built-in `student` / `teacher` / `admin` codes.
 
 ### 2026-04-13 v0.1 Reset
 
@@ -195,8 +202,8 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 ### 2026-04-13 Phase 4 First Pass
 
 - `app/review/page.tsx`, `components/review/ReviewResultsSidebar.tsx`, `components/review/ReviewReport.tsx`, `components/review/SkillPerformanceCard.tsx`, and `components/ReviewPageSkeleton.tsx` now use the workbook shell and tactile report styling.
-- `app/vocab/page.tsx` and `app/fix/page.tsx` now sit on the workbook board shell instead of the older glassmorphic backdrop treatment.
-- Shared board primitives and card surfaces were updated through `components/vocab/VocabBoardPrimitives.tsx`, `components/vocab/vocabPageTheme.ts`, `components/vocab/AddCardComposer.tsx`, `components/vocab/EditableVocabCard.tsx`, and `components/fix/FixCardTile.tsx`, which also affects the shared `vocab` and `fix` column families.
+- `app/vocab/page.tsx` and `app/test-manager/page.tsx` now sit on the workbook board shell instead of the older glassmorphic backdrop treatment.
+- Shared board primitives and card surfaces were updated through `components/vocab/VocabBoardPrimitives.tsx`, `components/vocab/vocabPageTheme.ts`, `components/vocab/AddCardComposer.tsx`, `components/vocab/EditableVocabCard.tsx`, and `components/test-manager/TestManagerCardTile.tsx`, which also affects the shared `vocab` and `test-manager` column families.
 - Targeted lint passed for the first Phase 4 file set.
 - `components/ReviewPopup.tsx`, `components/review/AnswerDetails.tsx`, and `components/review/PassageCollumn.tsx` are now migrated too, completing the main review flow shell for Phase 4.
 
@@ -246,7 +253,7 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 ### 2026-04-19 Initial Boot Loader Consistency Pass
 
 - `components/InitialTabBootReady.tsx` now supports a `when` gate and clears the initial-tab boot flag only after two animation frames, so the pretty loader drops only after the ready screen has actually painted.
-- Hydration-sensitive routes now gate boot completion correctly: `app/vocab/page.tsx` waits for board hydration, and `app/fix/page.tsx` waits for fix-board hydration instead of clearing boot as soon as the shell mounts.
+- Hydration-sensitive routes now gate boot completion correctly: `app/vocab/page.tsx` waits for board hydration, and `app/test-manager/page.tsx` waits for test-manager board hydration instead of clearing boot as soon as the shell mounts.
 - Non-happy-path settled states now also clear boot so the app does not get stuck on the pretty loader when a page resolves into an empty or unauthorized screen: `app/settings/page.tsx` and `components/TestEngine.tsx` now mark boot ready in those resolved fallback states too.
 
 ### 2026-04-19 Review Error Log
@@ -349,3 +356,21 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - Supabase function `public.get_user_dashboard_overview(uuid)` returns a minimal JSON payload with only `userStats`, 30-day `activity`, top-5 `recentResults`, and 30-day full-test `trend` points.
 - Dashboard components now consume aggregated activity/trend/recent data directly, while full-length and sectional libraries still use the lightweight summary results payload for per-test retake and score state.
 - Future dashboard work should extend the overview RPC first instead of reintroducing answer-level payloads into the dashboard bootstrap path.
+
+### 2026-04-20 Group Management And Access Tokens
+
+- Group management is expanding from the earlier placeholder teacher-group schema into a product feature with renamed canonical tables under `public.groups`.
+- Existing empty local group tables do not need migration preservation; the correct path is schema-forward cleanup that renames `teacher_groups` to `groups` and updates all dependent SQL functions, policies, and triggers accordingly.
+- The permission split is now explicit: `create_remove_groups` governs creating and deleting groups, while `edit_groups` governs renaming groups and editing memberships.
+- Group ownership is non-transferable and remains stored on the group row via `owner_user_id`; the creator is the owner, and owners may still edit their own groups even without the broader `edit_groups` permission.
+- User invite verification should reuse `public.user_settings` rather than a dedicated token table so the same storage area can support future per-user access-token features.
+- Group access tokens must use the `ronan_` prefix plus a 32-character custom NanoID alphabet of `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`.
+- Raw tokens should only be shown at generation or regeneration time; persisted storage should keep a hash plus metadata so token rotation immediately blocks future invite attempts while preserving already-created memberships.
+- The invite UX should support both row-based `email | token` entry and bulk `EMAIL=TOKEN` lines, and invitations should only succeed for already-registered users with a current valid token.
+- Permission records should gain contributor-facing descriptions and the admin role-management UI should surface those descriptions when editing roles.
+
+### 2026-04-20 Group Detail And Stats Split
+
+- The groups route is now split into a simple `/groups` directory page and a dedicated `/groups/[groupId]` detail page so create/list actions stay lightweight while editing happens in a focused dialog on the detail screen.
+- Group member statistics are now fetched through the SQL function `public.get_group_stats_overview(uuid)` instead of being assembled from large client payloads.
+- The new `group_stat_view` permission gates the stats section for joined groups, and it is seeded by default for the `teacher` and `admin` roles.

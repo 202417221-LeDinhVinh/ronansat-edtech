@@ -9,6 +9,7 @@ import {
   BarChart2,
   BookOpen,
   CircleAlert,
+  FolderKanban,
   LayoutDashboard,
   LibraryBig,
   LogOut,
@@ -170,12 +171,20 @@ const ADMIN_ITEMS: NavItemConfig[] = [
     matches: ["/settings"],
   },
   {
-    href: "/fix",
-    label: "Fix Board",
-    mobileLabel: "Fix",
+    href: "/groups",
+    label: "Groups",
+    mobileLabel: "Groups",
+    icon: FolderKanban,
+    tone: "accent-2",
+    matches: ["/groups"],
+  },
+  {
+    href: "/test-manager",
+    label: "Test Manager",
+    mobileLabel: "Manager",
     icon: Wrench,
     tone: "accent-3",
-    matches: ["/fix"],
+    matches: ["/test-manager"],
   },
   {
     href: "/admin",
@@ -187,6 +196,23 @@ const ADMIN_ITEMS: NavItemConfig[] = [
   },
 ];
 
+const GROUPS_ITEM: NavItemConfig = {
+  href: "/groups",
+  label: "Groups",
+  mobileLabel: "Groups",
+  icon: FolderKanban,
+  tone: "accent-2",
+  matches: ["/groups"],
+};
+
+function buildStudentItems(canManageGroups: boolean) {
+  if (!canManageGroups) {
+    return STUDENT_ITEMS;
+  }
+
+  return [...STUDENT_ITEMS.slice(0, -1), GROUPS_ITEM, STUDENT_ITEMS[STUDENT_ITEMS.length - 1]];
+}
+
 export default function Navbar() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -195,8 +221,19 @@ export default function Navbar() {
   const isReady = status !== "loading" && status !== "unauthenticated" && !!session;
   const isHiddenRoute = pathname.startsWith("/test/") || pathname.startsWith("/auth");
   const isAdmin = session?.user.role === "ADMIN";
+  const canManageGroups =
+    isAdmin ||
+    Boolean(
+      session?.user.permissions?.some(
+        (permission) =>
+          permission === "create_remove_groups" ||
+          permission === "edit_groups" ||
+          permission === "manage_students" ||
+          permission === "group_stat_view",
+      ),
+    );
   const homeHref = "/dashboard";
-  const navItems = isAdmin ? ADMIN_ITEMS : STUDENT_ITEMS;
+  const navItems = isAdmin ? ADMIN_ITEMS : buildStudentItems(canManageGroups);
   const displayName = session?.user.name || session?.user.email?.split("@")[0] || "Scholar";
 
   useEffect(() => {

@@ -45,7 +45,7 @@ export function ReportErrorButton({
     setMessage(null);
 
     try {
-      const response = await fetch(API_PATHS.FIX_REPORTS, {
+      const response = await fetch(API_PATHS.TEST_MANAGER_REPORTS, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

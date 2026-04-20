@@ -9,6 +9,7 @@ type VocabAddColumnPanelProps = {
   onCreateColumn: () => void;
   onCancel: () => void;
   onStart: () => void;
+  widthClass?: string;
 };
 
 export function VocabAddColumnPanel({
@@ -18,9 +19,10 @@ export function VocabAddColumnPanel({
   onCreateColumn,
   onCancel,
   onStart,
+  widthClass = COLUMN_WIDTH,
 }: VocabAddColumnPanelProps) {
   return (
-    <div className={`${COLUMN_WIDTH} shrink-0 self-start`}>
+    <div className={`${widthClass} shrink-0 self-start`}>
       {isAddingColumn ? (
         <div className="rounded-2xl border-2 border-ink-fg bg-surface-white p-4 brutal-shadow">
           <input
