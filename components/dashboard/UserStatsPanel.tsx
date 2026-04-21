@@ -8,24 +8,24 @@ import ActivityHeatmap from "@/components/ActivityHeatmap";
 import type { DashboardActivityDay } from "@/types/dashboard";
 import type { UserStatsSummary } from "@/types/testLibrary";
 
-interface UserStatsPanelProps {
+interface UserStatsPanelProps {    // Quy định 2 data input khi dùng UserStatsPanelProps
   userStats: UserStatsSummary;
   activity: DashboardActivityDay[];
 }
 
-export default function UserStatsPanel({ userStats, activity }: UserStatsPanelProps) {
+export default function UserStatsPanel({ userStats, activity }: UserStatsPanelProps) {    // Logic tính streak: Reset về đầu mỗi ngày + chạy vòng lặp
   const currentStreak = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const activeDays = new Set(
+    const activeDays = new Set(                                                     // activeDays là array chứa các ngày có làm test
       activity.filter((day) => day.count > 0).map((day) => day.dateKey),
     );
 
     let streak = 0;
-    const cursor = new Date(today);
+    const cursor = new Date(today);   // con trỏ thời gian, bắt đầu từ hôm nay
 
-    while (activeDays.has(cursor.toISOString().split("T")[0])) {
+    while (activeDays.has(cursor.toISOString().split("T")[0])) {   // Tính tổng các ngày active
       streak += 1;
       cursor.setDate(cursor.getDate() - 1);
     }

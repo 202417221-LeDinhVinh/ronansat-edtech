@@ -24,9 +24,9 @@ import { getTestingRoomThemePreset } from "@/lib/testingRoomTheme";
 import { useResizableDivider } from "@/hooks/useResizableDivider";
 import { useTestEngine } from "@/hooks/useTestEngine";
 
-export default function TestEngine({ testId }: { testId: string }) {
-  const { theme: testingRoomTheme } = useTestingRoomTheme();
-  const themePreset = getTestingRoomThemePreset(testingRoomTheme);
+export default function TestEngine({ testId }: { testId: string }) {   // Khởi tạo phòng thi, lấy về id của bài test
+  const { theme: testingRoomTheme } = useTestingRoomTheme();           // Lấy theme bài test, đổi tên thành testingRoomTheme
+  const themePreset = getTestingRoomThemePreset(testingRoomTheme);     // Lấy thông số cấu hình của theme mới
   const {
     mode,
     loading,
@@ -56,11 +56,13 @@ export default function TestEngine({ testId }: { testId: string }) {
     handleJump,
     handleSubmit,
     router,
-  } = useTestEngine(testId);
-  const [isReviewPageOpen, setIsReviewPageOpen] = useState(false);
+  } = useTestEngine(testId);  // hàm này (đã được lập trình ở chỗ khác) sẽ nhận mã testId, tự động tính toán và đưa ra các dữ liệu để dùng 
+  
+  
+  const [isReviewPageOpen, setIsReviewPageOpen] = useState(false);   // Check trang review đang đóng hay mở
 
-  const { leftWidth, isDragging, containerRef, handleDividerMouseDown } = useResizableDivider(50);
-  const discardExitHref = mode === "sectional" ? "/sectional" : "/full-length";
+  const { leftWidth, isDragging, containerRef, handleDividerMouseDown } = useResizableDivider(50);  // Công cụ cho kéo thay đổi kich thước bài test
+  const discardExitHref = mode === "sectional" ? "/sectional" : "/full-length";  // Tính toán để nếu User thoát thì điều hướng về đâu
 
   if (loading) {
     return <SimpleLoading />;
@@ -86,16 +88,24 @@ export default function TestEngine({ testId }: { testId: string }) {
     );
   }
 
-  const isLastModule =
+  const isLastModule =    
     availableModules.length === 0 || availableModules[availableModules.length - 1].originalIndex === currentStageIndex;
+    // Check xem còn module nào tiếp theo không hoặc index của module hiện tại có trùng với chỉ số của module cuối k
+    // nếu 1 trong 2 đúng thì isLastModule = true
 
   const buttonText = mode === "sectional" ? "Submit Module" : isLastModule ? "Submit Test" : "Next Module";
+  // nếu mode là sectional -> nút luôn hiện Submit Module
+  // là full-length thì hiện theo logic trên
+
+
+  // Logic yêu cầu hoàn thành min câu để được nộp
   const confirmDescription =
     mode === "sectional"
       ? `You must answer at least ${minimumRequiredCurrentModuleAnswers} questions before submitting this module.`
       : isLastModule
         ? `You must answer at least ${minimumRequiredCurrentModuleAnswers} questions in this module before submitting the test.`
         : `You must answer at least ${minimumRequiredCurrentModuleAnswers} questions in this module before moving on.`;
+
 
   return (
     <div

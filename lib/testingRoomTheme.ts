@@ -940,9 +940,22 @@ export function isTestingRoomTheme(
   return typeof value === "string" && value in TESTING_ROOM_THEME_PRESETS;
 }
 
-export function getTestingRoomThemePreset(
-  theme: TestingRoomTheme,
-): TestingRoomThemePreset {
+
+
+
+
+/**
+ *  Ví dụ về cuốn Menu (thường được viết ở file khác hoặc đầu file)
+const TESTING_ROOM_THEME_PRESETS = {
+  "dark": { background: "#000000", textColor: "#FFFFFF", buttonColor: "blue" },
+  "light": { background: "#FFFFFF", textColor: "#000000", buttonColor: "gray" }
+};
+ * 
+ */
+
+export function getTestingRoomThemePreset(   // Hàm này lấy cài đặt của từng theme
+  theme: TestingRoomTheme,     
+): TestingRoomThemePreset {              // Dấu : thứ 2 là quy định type của data được trả về -> Phục vụ cho lúc viết code k bị sai, sai thì chặn ngay, tránh để lên web mới bt lỗi 
   return TESTING_ROOM_THEME_PRESETS[theme];
 }
 
