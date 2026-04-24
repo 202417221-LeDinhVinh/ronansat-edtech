@@ -7,6 +7,8 @@ import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
 import { deleteClientCache } from "@/lib/clientCache";
 import { DASHBOARD_CACHE_KEYS } from "@/lib/dashboardCache";
+import { REVIEW_RESULTS_CACHE_KEY } from "@/lib/services/reviewService";
+import { preloadPostSubmitStudentData } from "@/lib/startupPreload";
 import type { QuestionExtra } from "@/lib/questionExtra";
 import { normalizeSectionName, VERBAL_SECTION } from "@/lib/sections";
 import { checkIsCorrect } from "@/utils/gradingHelper";
@@ -39,7 +41,8 @@ function clearDashboardCaches() {
     DASHBOARD_CACHE_KEYS.userResults,
     DASHBOARD_CACHE_KEYS.apiOverview,
     DASHBOARD_CACHE_KEYS.apiUserResults,
-    "review:results",
+    `${DASHBOARD_CACHE_KEYS.apiUserResults}:30`,
+    REVIEW_RESULTS_CACHE_KEY,
   ];
 
   cacheKeys.forEach((key) => deleteClientCache(key));
@@ -72,7 +75,6 @@ export function useTestEngine(testId: string) {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const isSubmittingRef = useRef(false);
 
   const availableModules = testStages
@@ -92,7 +94,7 @@ export function useTestEngine(testId: string) {
   const { timeRemaining, setTimeRemaining, isTimerHidden, setIsTimerHidden } = useTimer(
     0,
     loading || isSubmitting,
-    () => handleSubmit({ trigger: "timer" })
+    () => handleSubmit({ trigger: "timer", bypassCompletionGate: true })
   );
 
   useEffect(() => {
@@ -187,14 +189,14 @@ export function useTestEngine(testId: string) {
     }
 
     if (!options?.bypassCompletionGate && answeredCurrentModuleQuestions < minimumRequiredCurrentModuleAnswers) {
-      if (options?.trigger === "timer") {
-        setIsDiscardDialogOpen(true);
-        return;
-      }
+      const message =
+        mode === "sectional"
+          ? `Answer at least ${minimumRequiredCurrentModuleAnswers} of ${currentModuleQuestions.length} questions to submit before time runs out.`
+          : `Answer at least ${minimumRequiredCurrentModuleAnswers} of ${currentModuleQuestions.length} questions to ${
+              availableModules.some((stage) => stage.originalIndex > currentStageIndex) ? "move on early" : "submit before time runs out"
+            }.`;
 
-      window.alert(
-        `You need to answer at least ${minimumRequiredCurrentModuleAnswers} of ${currentModuleQuestions.length} questions in this module before you can continue.`
-      );
+      window.alert(message);
       return;
     }
 
@@ -248,6 +250,8 @@ export function useTestEngine(testId: string) {
 
         if (res.status === 200 || res.status === 201) {
           clearDashboardCaches();
+          await preloadPostSubmitStudentData();
+          router.refresh();
           router.push(`/review?testId=${testId}&mode=sectional`);
         }
       } else {
@@ -282,6 +286,8 @@ export function useTestEngine(testId: string) {
 
         if (res.status === 200 || res.status === 201) {
           clearDashboardCaches();
+          await preloadPostSubmitStudentData();
+          router.refresh();
           router.push(`/review?testId=${testId}&mode=full`);
         }
       }
@@ -323,8 +329,6 @@ export function useTestEngine(testId: string) {
     availableModules,
     answeredCurrentModuleQuestions,
     minimumRequiredCurrentModuleAnswers,
-    isDiscardDialogOpen,
-    setIsDiscardDialogOpen,
     handleAnswerSelect,
     toggleFlag,
     handleNext,

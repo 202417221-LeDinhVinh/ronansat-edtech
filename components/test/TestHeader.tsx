@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { FocusEventHandler, MouseEventHandler, TouchEventHandler } from "react";
 import { Button } from "antd";
 import { AlertTriangle, Calculator, ChevronDown, CircleX, Clock3, Eye, EyeOff } from "lucide-react";
 
@@ -20,6 +21,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getTestingRoomThemePreset, type TestingRoomTheme } from "@/lib/testingRoomTheme";
 
+type IntentPrefetchHandlers = {
+  onMouseEnter: MouseEventHandler<HTMLElement>;
+  onMouseLeave: MouseEventHandler<HTMLElement>;
+  onFocus: FocusEventHandler<HTMLElement>;
+  onBlur: FocusEventHandler<HTMLElement>;
+  onTouchStart: TouchEventHandler<HTMLElement>;
+};
+
 interface TestHeaderProps {
   theme?: TestingRoomTheme;
   sectionName: string;
@@ -34,6 +43,7 @@ interface TestHeaderProps {
   confirmTitle?: string;
   confirmDescription?: string;
   onToggleCalculator?: () => void;
+  submitIntentPrefetchHandlers?: IntentPrefetchHandlers;
   onLeave: () => void;
   reportContext?: {
     testId: string;
@@ -60,6 +70,7 @@ export default function TestHeader({
   confirmTitle,
   confirmDescription,
   onLeave,
+  submitIntentPrefetchHandlers,
   reportContext,
 }: TestHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -133,6 +144,7 @@ export default function TestHeader({
                 type="default"
                 loading={isSubmitting}
                 disabled={isSubmitting}
+                {...submitIntentPrefetchHandlers}
                 className={`!h-11 !px-6 !font-bold ${submitButtonClass}`}
               >
                 {submitButtonLabel}
@@ -215,6 +227,7 @@ export default function TestHeader({
 
             <button
               type="button"
+              {...submitIntentPrefetchHandlers}
               onClick={() => {
                 setMobileMenuOpen(false);
                 setMobileConfirmOpen(true);
