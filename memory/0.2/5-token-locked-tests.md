@@ -16,3 +16,9 @@
 
 - This design intentionally does not persist unlock state to a user database row.
 - If tokens need to be rotated later and old local unlocks should expire, add a public lock version or updated timestamp to the lock metadata and include that in the localStorage value.
+
+## Admin Management
+
+- 2026-04-28: Added `/api/test-manager/locked-tests` for admins with `edit_public_exams`.
+- The admin endpoint can list all published public tests with lock state, upsert a token lock, and delete a lock row.
+- The management UI lives on `/test-manager/manage-tests` in a `Token Locks` workbook panel.
