@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { TestTokenDialog } from "@/components/test-access/TestTokenDialog";
 import { useTestAccess } from "@/components/test-access/useTestAccess";
@@ -57,7 +57,13 @@ export default function DownloadPdfButton({
   requiresToken = false,
 }: DownloadPdfButtonProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [hasStoredToken, setHasStoredToken] = useState(!requiresToken);
   const access = useTestAccess({ testId, requiresToken });
+  const needsToken = requiresToken && (!access.isUnlocked || !hasStoredToken);
+
+  useEffect(() => {
+    setHasStoredToken(!requiresToken || Boolean(getStoredTestAccessToken(testId)));
+  }, [access.isUnlocked, requiresToken, testId]);
 
   const downloadPdf = async () => {
     const params = new URLSearchParams({ testId });
@@ -113,7 +119,7 @@ export default function DownloadPdfButton({
         disabled={isDownloading}
         className={`${className ?? "text-xs font-medium underline"} ${isDownloading ? "cursor-not-allowed opacity-60" : ""}`}
       >
-        {isDownloading ? "Downloading..." : "Download PDF"}
+        {isDownloading ? "Downloading..." : needsToken ? "Enter Token" : "Download PDF"}
       </button>
 
       <TestTokenDialog
@@ -123,6 +129,7 @@ export default function DownloadPdfButton({
         onSubmit={async (token) => {
           const unlocked = await access.verifyToken(token);
           if (unlocked) {
+            setHasStoredToken(true);
             window.setTimeout(() => {
               void handleDownload();
             }, 0);
