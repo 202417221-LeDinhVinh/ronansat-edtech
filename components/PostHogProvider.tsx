@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/auth/client";
 import posthog from "posthog-js";
 
@@ -13,10 +12,8 @@ type PostHogProviderProps = {
 };
 
 export default function PostHogProvider({ children }: PostHogProviderProps) {
-  const pathname = usePathname();
   const { data: session, status } = useSession();
   const hasInitializedRef = useRef(false);
-  const lastPageUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!posthogKey || hasInitializedRef.current) {
@@ -25,7 +22,7 @@ export default function PostHogProvider({ children }: PostHogProviderProps) {
 
     posthog.init(posthogKey, {
       api_host: posthogHost,
-      capture_pageview: false,
+      capture_pageview: "history_change",
       defaults: "2026-01-30",
       person_profiles: "identified_only",
     });
@@ -55,24 +52,6 @@ export default function PostHogProvider({ children }: PostHogProviderProps) {
       hasCompletedProfile: Boolean(session.user.hasCompletedProfile),
     });
   }, [session, status]);
-
-  useEffect(() => {
-    if (!hasInitializedRef.current || !pathname) {
-      return;
-    }
-
-    const currentUrl = window.location.pathname + window.location.search;
-
-    if (lastPageUrlRef.current === currentUrl) {
-      return;
-    }
-
-    posthog.capture("$pageview", {
-      $current_url: currentUrl,
-    });
-
-    lastPageUrlRef.current = currentUrl;
-  }, [pathname]);
 
   return children;
 }
