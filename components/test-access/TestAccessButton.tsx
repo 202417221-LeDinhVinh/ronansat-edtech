@@ -25,7 +25,7 @@ export function TestAccessButton({
   testTitle,
   href,
   requiresToken = false,
-  lockedLabel = "Enter token to access this test",
+  lockedLabel = "Enter token",
   className,
   children,
   ariaLabel,
@@ -33,7 +33,9 @@ export function TestAccessButton({
   onIntentPrefetch,
 }: TestAccessButtonProps) {
   const access = useTestAccess({ testId, requiresToken });
-  const intentHandlers = useIntentPrefetch<HTMLAnchorElement | HTMLButtonElement>({
+  const intentHandlers = useIntentPrefetch<
+    HTMLAnchorElement | HTMLButtonElement
+  >({
     key: prefetchKey ?? `test-access:${href}`,
     enabled: Boolean(onIntentPrefetch) && (!requiresToken || access.isUnlocked),
     onPrefetch: async () => {
@@ -43,7 +45,12 @@ export function TestAccessButton({
 
   if (!requiresToken || access.isUnlocked) {
     return (
-      <Link aria-label={ariaLabel} className={className} href={href} {...intentHandlers}>
+      <Link
+        aria-label={ariaLabel}
+        className={className}
+        href={href}
+        {...intentHandlers}
+      >
         {children}
       </Link>
     );
@@ -51,7 +58,12 @@ export function TestAccessButton({
 
   return (
     <>
-      <button aria-label={ariaLabel} className={className} onClick={access.openDialog} type="button">
+      <button
+        aria-label={ariaLabel}
+        className={className}
+        onClick={access.openDialog}
+        type="button"
+      >
         {lockedLabel}
       </button>
       <TestTokenDialog

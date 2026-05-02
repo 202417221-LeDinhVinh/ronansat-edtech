@@ -15,11 +15,17 @@ type TestRoomAccessGateProps = {
   children: ReactNode;
 };
 
-export function TestRoomAccessGate({ testId, children }: TestRoomAccessGateProps) {
+export function TestRoomAccessGate({
+  testId,
+  children,
+}: TestRoomAccessGateProps) {
   const [requiresToken, setRequiresToken] = useState<boolean | null>(null);
   const [loadError, setLoadError] = useState("");
   const hasOpenedDialogRef = useRef(false);
-  const access = useTestAccess({ testId, requiresToken: requiresToken ?? false });
+  const access = useTestAccess({
+    testId,
+    requiresToken: requiresToken ?? false,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -31,7 +37,9 @@ export function TestRoomAccessGate({ testId, children }: TestRoomAccessGateProps
 
       try {
         const params = new URLSearchParams({ testId });
-        const response = await api.get(`${API_PATHS.TEST_ACCESS}?${params.toString()}`);
+        const response = await api.get(
+          `${API_PATHS.TEST_ACCESS}?${params.toString()}`,
+        );
 
         if (!cancelled) {
           setRequiresToken(Boolean(response.data?.requiresToken));
@@ -66,8 +74,12 @@ export function TestRoomAccessGate({ testId, children }: TestRoomAccessGateProps
       <div className="bg-dot-pattern flex min-h-screen items-center justify-center bg-paper-bg p-6 text-ink-fg">
         <InitialTabBootReady />
         <section className="workbook-panel max-w-lg px-8 py-10 text-center">
-          <div className="workbook-sticker mx-auto w-fit bg-accent-3 text-white">Access Check</div>
-          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight">Try again in a moment</h1>
+          <div className="workbook-sticker mx-auto w-fit bg-accent-3 text-white">
+            Access Check
+          </div>
+          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight">
+            Try again in a moment
+          </h1>
           <p className="mt-3 text-base leading-7 text-ink-fg/75">{loadError}</p>
         </section>
       </div>
@@ -83,12 +95,18 @@ export function TestRoomAccessGate({ testId, children }: TestRoomAccessGateProps
             <LockKeyhole className="h-4 w-4" />
             Locked Test
           </div>
-          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight">Token required</h1>
+          <h1 className="mt-5 font-display text-4xl font-black uppercase tracking-tight">
+            Token required
+          </h1>
           <p className="mt-3 text-base leading-7 text-ink-fg/75">
             Enter the token once on this device to open this practice test.
           </p>
-          <button className="workbook-button mt-6 w-full justify-center" onClick={access.openDialog} type="button">
-            Enter token to access this test
+          <button
+            className="workbook-button mt-6 w-full justify-center"
+            onClick={access.openDialog}
+            type="button"
+          >
+            Enter token
           </button>
         </section>
         <TestTokenDialog
